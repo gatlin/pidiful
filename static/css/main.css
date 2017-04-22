@@ -1,0 +1,33 @@
+body {
+    padding: 5px;
+    }
+
+#the_canvas {
+    display: block;
+    margin: 0 auto;
+}
+
+.horizontal-bar {
+    display: block;
+    margin: 10px auto;
+    text-align: center;
+}
+
+.push-btn {
+    display: block;
+    text-align: center;
+    margin: 0 auto;
+    }
+
+#ctrl-bar {
+    text-align: center;
+    }
+
+.horizontal-bar span {
+    display: block;
+    text-align: center;
+}
+
+label {
+    margin-right: 5px;
+    }
