@@ -84,7 +84,7 @@ function update_model(action: Action, model: AppState): AppState {
         const dP = model.kP * e_t +
             model.kI * model.i +
             model.kD * model.d;
-        model.pos = Math.floor(model.pos + (dP / 5));
+        model.pos = Math.floor(model.pos + dP);
         model.lastFrameTime = time;
         return model;
     };
@@ -146,9 +146,25 @@ function main(scope) {
         }))
         .connect(scope.actions);
 
+    scope.events.click
+        .filter(evt => evt.getId() === 'left-btn')
+        .map(evt => ({
+            type: Actions.Push,
+            data: ArrowKey.Left
+        }))
+        .connect(scope.actions);
+
     // right arrow
     scope.events.keydown
         .filter(evt => evt.getRaw().keyCode === 39)
+        .map(evt => ({
+            type: Actions.Push,
+            data: ArrowKey.Right
+        }))
+        .connect(scope.actions);
+
+    scope.events.click
+        .filter(evt => evt.getId() === 'right-btn')
         .map(evt => ({
             type: Actions.Push,
             data: ArrowKey.Right
@@ -238,6 +254,14 @@ function render(state) {
                 }, [])])
         ]);
 
+    const push_bar = el('div', {
+        'class': 'horizontal-bar',
+        'id': 'push-bar'
+    }, [
+            el('button', { 'class': 'push-btn', 'id': 'left-btn' }, ['Left']),
+            el('button', { 'class': 'push-btn', 'id': 'right-btn' }, ['Right'])
+        ]);
+
     return el('div', { 'id': 'main' }, [
         el('canvas', {
             'id': 'the_canvas',
@@ -245,6 +269,7 @@ function render(state) {
             'width': state.canvasWidth
         }, [])
             .subscribe(canvasMailbox),
+        push_bar,
         ctrl_bar,
         force_bar
     ]);

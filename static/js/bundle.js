@@ -109,7 +109,7 @@
 	            var dP = model.kP * e_t +
 	                model.kI * model.i +
 	                model.kD * model.d;
-	            model.pos = Math.floor(model.pos + (dP / 5));
+	            model.pos = Math.floor(model.pos + dP);
 	            model.lastFrameTime = time;
 	            return model;
 	        };
@@ -160,9 +160,23 @@
 	            data: ArrowKey.Left
 	        }); })
 	            .connect(scope.actions);
+	        scope.events.click
+	            .filter(function (evt) { return evt.getId() === 'left-btn'; })
+	            .map(function (evt) { return ({
+	            type: Actions.Push,
+	            data: ArrowKey.Left
+	        }); })
+	            .connect(scope.actions);
 	        // right arrow
 	        scope.events.keydown
 	            .filter(function (evt) { return evt.getRaw().keyCode === 39; })
+	            .map(function (evt) { return ({
+	            type: Actions.Push,
+	            data: ArrowKey.Right
+	        }); })
+	            .connect(scope.actions);
+	        scope.events.click
+	            .filter(function (evt) { return evt.getId() === 'right-btn'; })
 	            .map(function (evt) { return ({
 	            type: Actions.Push,
 	            data: ArrowKey.Right
@@ -247,6 +261,13 @@
 	                }, [])
 	            ])
 	        ]);
+	        var push_bar = alm_1.el('div', {
+	            'class': 'horizontal-bar',
+	            'id': 'push-bar'
+	        }, [
+	            alm_1.el('button', { 'class': 'push-btn', 'id': 'left-btn' }, ['Left']),
+	            alm_1.el('button', { 'class': 'push-btn', 'id': 'right-btn' }, ['Right'])
+	        ]);
 	        return alm_1.el('div', { 'id': 'main' }, [
 	            alm_1.el('canvas', {
 	                'id': 'the_canvas',
@@ -254,6 +275,7 @@
 	                'width': state.canvasWidth
 	            }, [])
 	                .subscribe(canvasMailbox),
+	            push_bar,
 	            ctrl_bar,
 	            force_bar
 	        ]);

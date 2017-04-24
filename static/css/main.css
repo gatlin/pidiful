@@ -1,10 +1,12 @@
 body {
     padding: 5px;
+    font-family: sans-serif;
     }
 
 #the_canvas {
     display: block;
     margin: 0 auto;
+    border: 1px solid #b9b9b9;
 }
 
 .horizontal-bar {
@@ -12,12 +14,6 @@ body {
     margin: 10px auto;
     text-align: center;
 }
-
-.push-btn {
-    display: block;
-    text-align: center;
-    margin: 0 auto;
-    }
 
 #ctrl-bar {
     text-align: center;
@@ -30,4 +26,50 @@ body {
 
 label {
     margin-right: 5px;
+    }
+
+#ctrl-bar span {
+    display: block;
+    width: 400px;
+    margin: 0 auto;
+
+    border-left: 1px solid #b9b9b9;
+    border-right: 1px solid #b9b9b9;
+}
+
+#ctrl-bar span:first-child {
+    border-top: 1px solid #b9b9b9;
+    }
+
+#ctrl-bar span:last-child {
+    border-bottom: 1px solid #b9b9b9;
+    }
+
+#ctrl-bar span label {
+    line-height: 22px;
+}
+
+#push-bar button {
+    border-top: 1px solid #b9b9b9;
+    border-bottom: 1px solid #b9b9b9;
+    height: 40px;
+    width: 200px;
+}
+
+#left-btn {
+    border-left: 1px solid #b9b9b9;
+    border-right: 0;
+}
+
+#right-btn {
+    border-right: 1px solid #b9b9b9;
+    border-left: 0;
+    }
+
+input {
+    border: 3px solid rgba(0,0,0,0);
+    padding: 13px 13px 13px 54px;
+    box-sizing: border-box;
+    line-height: 22px;
+    text-align: right;
     }
