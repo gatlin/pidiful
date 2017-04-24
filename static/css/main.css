@@ -21,8 +21,9 @@ body {
 
 .horizontal-bar span {
     display: block;
-    text-align: center;
-}
+    margin: 0 auto;
+    width: 300px;
+    }
 
 label {
     margin-right: 5px;
@@ -30,7 +31,7 @@ label {
 
 #ctrl-bar span {
     display: block;
-    width: 400px;
+    width: 300px;
     margin: 0 auto;
 
     border-left: 1px solid #b9b9b9;
@@ -53,7 +54,7 @@ label {
     border-top: 1px solid #b9b9b9;
     border-bottom: 1px solid #b9b9b9;
     height: 40px;
-    width: 200px;
+    width: 150px;
 }
 
 #left-btn {
@@ -68,7 +69,7 @@ label {
 
 input {
     border: 3px solid rgba(0,0,0,0);
-    padding: 13px 13px 13px 54px;
+    padding: 13px 13px 13px 34px;
     box-sizing: border-box;
     line-height: 22px;
     text-align: right;

@@ -43,8 +43,8 @@ function new_appstate(): AppState {
         canvasCtx: null,
         pos: 0,
         desired: 0,
-        canvasWidth: 400,
-        canvasHeight: 400,
+        canvasWidth: 300,
+        canvasHeight: 200,
         i: 0,
         d: 0,
         kP: 0.2,
@@ -238,21 +238,17 @@ function render(state) {
                     'type': 'text',
                     'value': state.kD,
                     'id': 'inp-kD'
-                }, [])])
-        ]);
-
-    const force_bar = el('div', {
-        'class': 'horizontal-bar',
-        'id': 'force-bar'
-    }, [
+                }, [])]),
             el('span', {}, [
-                el('label', { 'for': 'inp-force' }, ['Force =']),
+                el('label', { 'for': 'inp-force' }, ['F =']),
                 el('input', {
                     'type': 'text',
                     'value': state.force,
                     'id': 'inp-force'
-                }, [])])
+                }, [])
+            ])
         ]);
+
 
     const push_bar = el('div', {
         'class': 'horizontal-bar',
@@ -270,8 +266,7 @@ function render(state) {
         }, [])
             .subscribe(canvasMailbox),
         push_bar,
-        ctrl_bar,
-        force_bar
+        ctrl_bar
     ]);
 }
 

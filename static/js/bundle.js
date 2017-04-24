@@ -70,8 +70,8 @@
 	            canvasCtx: null,
 	            pos: 0,
 	            desired: 0,
-	            canvasWidth: 400,
-	            canvasHeight: 400,
+	            canvasWidth: 300,
+	            canvasHeight: 200,
 	            i: 0,
 	            d: 0,
 	            kP: 0.2,
@@ -246,14 +246,9 @@
 	                    'value': state.kD,
 	                    'id': 'inp-kD'
 	                }, [])
-	            ])
-	        ]);
-	        var force_bar = alm_1.el('div', {
-	            'class': 'horizontal-bar',
-	            'id': 'force-bar'
-	        }, [
+	            ]),
 	            alm_1.el('span', {}, [
-	                alm_1.el('label', { 'for': 'inp-force' }, ['Force =']),
+	                alm_1.el('label', { 'for': 'inp-force' }, ['F =']),
 	                alm_1.el('input', {
 	                    'type': 'text',
 	                    'value': state.force,
@@ -276,8 +271,7 @@
 	            }, [])
 	                .subscribe(canvasMailbox),
 	            push_bar,
-	            ctrl_bar,
-	            force_bar
+	            ctrl_bar
 	        ]);
 	    }
 	    var app = new alm_1.App({
