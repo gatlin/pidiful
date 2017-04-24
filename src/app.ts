@@ -2,10 +2,15 @@ import { App, Mailbox, el } from './alm/alm';
 
 const canvasMailbox = new Mailbox<HTMLElement | null>(null);
 
+enum ArrowKey {
+    Left,
+    Right
+};
+
 enum Actions {
     Tick,
     CanvasUpdate,
-    PushSideways,
+    Push,
     UpdateKP,
     UpdateKI,
     UpdateKD,
@@ -23,8 +28,9 @@ type AppState = {
     kP: number;
     kI: number;
     kD: number;
-    lastTime: number;
+    lastFrameTime: number;
     force: number;
+    lastPushTime: number;
 };
 
 type Action = {
@@ -44,8 +50,9 @@ function new_appstate(): AppState {
         kP: 0.2,
         kI: 0.01,
         kD: 0.5,
-        lastTime: Date.now(),
-        force: 20
+        lastFrameTime: Date.now(),
+        force: 20,
+        lastPushTime: Date.now()
     };
 }
 
@@ -69,15 +76,16 @@ function update_model(action: Action, model: AppState): AppState {
     dispatch[Actions.Tick] = () => {
         if (!model.canvasCtx) { return model; }
         const time = Date.now();
-        const dt = time - model.lastTime;
+        const dt = time - model.lastFrameTime;
         draw(model);
         const e_t = model.desired - model.pos;
-        model.i = model.i + e_t * dt;
-        model.d = (e_t - model.d) / dt;
-        model.pos += model.kP * e_t +
+        model.i = Math.floor(model.i + e_t * dt);
+        model.d = Math.floor((e_t - model.d) / dt);
+        const dP = model.kP * e_t +
             model.kI * model.i +
             model.kD * model.d;
-        model.lastTime = time;
+        model.pos = Math.floor(model.pos + (dP / 5));
+        model.lastFrameTime = time;
         return model;
     };
 
@@ -87,8 +95,11 @@ function update_model(action: Action, model: AppState): AppState {
         return model;
     };
 
-    dispatch[Actions.PushSideways] = () => {
-        model.pos = model.pos + model.force;
+    dispatch[Actions.Push] = () => {
+        model.pos = action.data === ArrowKey.Left
+            ? model.pos - model.force
+            : model.pos + model.force;
+        model.lastPushTime = Date.now();
         return model;
     };
 
@@ -112,6 +123,12 @@ function update_model(action: Action, model: AppState): AppState {
         return model;
     };
 
+    if (isNaN(model.pos)) {
+        model.pos = 0;
+        model.i = 0;
+        model.d = 0;
+    }
+
     return dispatch[action.type]();
 }
 
@@ -120,9 +137,22 @@ function main(scope) {
         .map(() => ({ type: Actions.Tick }))
         .connect(scope.actions);
 
-    scope.events.click
-        .filter(evt => evt.getId() === 'push-btn')
-        .map(evt => ({ type: Actions.PushSideways }))
+    // left arrow
+    scope.events.keydown
+        .filter(evt => evt.getRaw().keyCode === 37)
+        .map(evt => ({
+            type: Actions.Push,
+            data: ArrowKey.Left
+        }))
+        .connect(scope.actions);
+
+    // right arrow
+    scope.events.keydown
+        .filter(evt => evt.getRaw().keyCode === 39)
+        .map(evt => ({
+            type: Actions.Push,
+            data: ArrowKey.Right
+        }))
         .connect(scope.actions);
 
     scope.events.change
@@ -215,15 +245,6 @@ function render(state) {
             'width': state.canvasWidth
         }, [])
             .subscribe(canvasMailbox),
-        el('div', {
-            'class': 'horizontal-bar',
-            'id': 'btn-bar'
-        }, [
-                el('button', {
-                    'class': 'push-btn',
-                    'id': 'push-btn'
-                }, ['Push sideways'])
-            ]),
         ctrl_bar,
         force_bar
     ]);
@@ -231,7 +252,6 @@ function render(state) {
 
 const app = new App<AppState>({
     domRoot: 'app',
-    eventRoot: 'app',
     state: new_appstate(),
     update: update_model,
     render: render,

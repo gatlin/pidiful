@@ -57,7 +57,7 @@ data
 
 .AppleDouble
 dist/*
-static/js/*
+#static/js/*
 tmp/*
 init.sh
 package.json.sample

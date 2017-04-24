@@ -48,11 +48,17 @@
 	    "use strict";
 	    exports.__esModule = true;
 	    var canvasMailbox = new alm_1.Mailbox(null);
+	    var ArrowKey;
+	    (function (ArrowKey) {
+	        ArrowKey[ArrowKey["Left"] = 0] = "Left";
+	        ArrowKey[ArrowKey["Right"] = 1] = "Right";
+	    })(ArrowKey || (ArrowKey = {}));
+	    ;
 	    var Actions;
 	    (function (Actions) {
 	        Actions[Actions["Tick"] = 0] = "Tick";
 	        Actions[Actions["CanvasUpdate"] = 1] = "CanvasUpdate";
-	        Actions[Actions["PushSideways"] = 2] = "PushSideways";
+	        Actions[Actions["Push"] = 2] = "Push";
 	        Actions[Actions["UpdateKP"] = 3] = "UpdateKP";
 	        Actions[Actions["UpdateKI"] = 4] = "UpdateKI";
 	        Actions[Actions["UpdateKD"] = 5] = "UpdateKD";
@@ -71,8 +77,9 @@
 	            kP: 0.2,
 	            kI: 0.01,
 	            kD: 0.5,
-	            lastTime: Date.now(),
-	            force: 20
+	            lastFrameTime: Date.now(),
+	            force: 20,
+	            lastPushTime: Date.now()
 	        };
 	    }
 	    function draw(model) {
@@ -94,15 +101,16 @@
 	                return model;
 	            }
 	            var time = Date.now();
-	            var dt = time - model.lastTime;
+	            var dt = time - model.lastFrameTime;
 	            draw(model);
 	            var e_t = model.desired - model.pos;
-	            model.i = model.i + e_t * dt;
-	            model.d = (e_t - model.d) / dt;
-	            model.pos += model.kP * e_t +
+	            model.i = Math.floor(model.i + e_t * dt);
+	            model.d = Math.floor((e_t - model.d) / dt);
+	            var dP = model.kP * e_t +
 	                model.kI * model.i +
 	                model.kD * model.d;
-	            model.lastTime = time;
+	            model.pos = Math.floor(model.pos + (dP / 5));
+	            model.lastFrameTime = time;
 	            return model;
 	        };
 	        dispatch[Actions.CanvasUpdate] = function () {
@@ -110,8 +118,11 @@
 	            model.canvasCtx = canvasEl.getContext('2d');
 	            return model;
 	        };
-	        dispatch[Actions.PushSideways] = function () {
-	            model.pos = model.pos + model.force;
+	        dispatch[Actions.Push] = function () {
+	            model.pos = action.data === ArrowKey.Left
+	                ? model.pos - model.force
+	                : model.pos + model.force;
+	            model.lastPushTime = Date.now();
 	            return model;
 	        };
 	        dispatch[Actions.UpdateKP] = function () {
@@ -130,15 +141,32 @@
 	            model.force = action.data;
 	            return model;
 	        };
+	        if (isNaN(model.pos)) {
+	            model.pos = 0;
+	            model.i = 0;
+	            model.d = 0;
+	        }
 	        return dispatch[action.type]();
 	    }
 	    function main(scope) {
 	        scope.ports.inbound.tick
 	            .map(function () { return ({ type: Actions.Tick }); })
 	            .connect(scope.actions);
-	        scope.events.click
-	            .filter(function (evt) { return evt.getId() === 'push-btn'; })
-	            .map(function (evt) { return ({ type: Actions.PushSideways }); })
+	        // left arrow
+	        scope.events.keydown
+	            .filter(function (evt) { return evt.getRaw().keyCode === 37; })
+	            .map(function (evt) { return ({
+	            type: Actions.Push,
+	            data: ArrowKey.Left
+	        }); })
+	            .connect(scope.actions);
+	        // right arrow
+	        scope.events.keydown
+	            .filter(function (evt) { return evt.getRaw().keyCode === 39; })
+	            .map(function (evt) { return ({
+	            type: Actions.Push,
+	            data: ArrowKey.Right
+	        }); })
 	            .connect(scope.actions);
 	        scope.events.change
 	            .filter(function (evt) { return evt.getId() === 'inp-kP'; })
@@ -226,22 +254,12 @@
 	                'width': state.canvasWidth
 	            }, [])
 	                .subscribe(canvasMailbox),
-	            alm_1.el('div', {
-	                'class': 'horizontal-bar',
-	                'id': 'btn-bar'
-	            }, [
-	                alm_1.el('button', {
-	                    'class': 'push-btn',
-	                    'id': 'push-btn'
-	                }, ['Push sideways'])
-	            ]),
 	            ctrl_bar,
 	            force_bar
 	        ]);
 	    }
 	    var app = new alm_1.App({
 	        domRoot: 'app',
-	        eventRoot: 'app',
 	        state: new_appstate(),
 	        update: update_model,
 	        render: render,
