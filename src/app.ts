@@ -1,10 +1,11 @@
 import { App, Mailbox, el } from './alm/alm';
-
+import { Vector } from './vector';
 const canvasMailbox = new Mailbox<HTMLElement | null>(null);
 
-enum ArrowKey {
+enum Direction {
     Left,
-    Right
+    Right,
+    None
 };
 
 enum Actions {
@@ -19,8 +20,12 @@ enum Actions {
 
 type AppState = {
     canvasCtx: any;
-    pos: number;
-    desired: number;
+    pos: Vector;
+    vel: Vector;
+    acc: Vector;
+    mass: number;
+    radius: number;
+    desired: Vector;
     canvasWidth: number;
     canvasHeight: number;
     i: number;
@@ -29,8 +34,7 @@ type AppState = {
     kI: number;
     kD: number;
     lastFrameTime: number;
-    force: number;
-    lastPushTime: number;
+    push_force: number;
 };
 
 type Action = {
@@ -41,18 +45,21 @@ type Action = {
 function new_appstate(): AppState {
     return {
         canvasCtx: null,
-        pos: 0,
-        desired: 0,
-        canvasWidth: 300,
-        canvasHeight: 200,
+        pos: new Vector(0, 600 - 32),
+        vel: new Vector(0, 0),
+        acc: new Vector(0, 0),
+        mass: 1,
+        radius: 32,
+        desired: new Vector(0, 0),
+        canvasWidth: 800,
+        canvasHeight: 600,
         i: 0,
         d: 0,
         kP: 0.2,
         kI: 0.01,
         kD: 0.5,
         lastFrameTime: Date.now(),
-        force: 20,
-        lastPushTime: Date.now()
+        push_force: 1000
     };
 }
 
@@ -60,13 +67,15 @@ function draw(model) {
     const ctx = model.canvasCtx;
     const cW = model.canvasWidth;
     const cH = model.canvasHeight;
+    const r = model.radius - 7;
 
-    // draw a line
+    // draw a circle
     ctx.clearRect(0, 0, cW, cH);
     ctx.beginPath();
-    ctx.lineWidth = 14;
+    ctx.lineWidth = 7;
     ctx.strokeStyle = '#325FA2';
-    ctx.arc((cW / 2) + model.pos, cH / 2, 50, 0, Math.PI * 2, true);
+    ctx.arc((cW / 2) + model.pos.getX(),
+        (cH - model.pos.getY()), r, 0, Math.PI * 2, true);
     ctx.stroke();
 }
 
@@ -75,17 +84,31 @@ function update_model(action: Action, model: AppState): AppState {
 
     dispatch[Actions.Tick] = () => {
         if (!model.canvasCtx) { return model; }
-        const time = Date.now();
-        const dt = time - model.lastFrameTime;
+
+        const currentTime = Date.now();
+        const dt = (currentTime - model.lastFrameTime) / 1000; // in seconds
+
+        const fy = new Vector(0, -1000);
+
+        const delta = model.vel.clone().multiplyScalar(dt);
+        model.pos.add(delta);
+
+        const avg_acc = fy.add(model.acc).divideScalar(2);
+        model.vel.add(avg_acc.multiplyScalar(dt));
+
+        if (model.pos.y - model.radius < 0) {
+            model.vel.y *= -0.5;
+            model.pos.y = model.radius;
+        }
+
+        const bound_left = -1 * (model.canvasWidth / 2);
+        if (model.pos.x < bound_left) {
+            model.vel.x *= -0.5;
+            model.pos.x = bound_left;
+        }
+
+        model.lastFrameTime = currentTime;
         draw(model);
-        const e_t = model.desired - model.pos;
-        model.i = Math.floor(model.i + e_t * dt);
-        model.d = Math.floor((e_t - model.d) / dt);
-        const dP = model.kP * e_t +
-            model.kI * model.i +
-            model.kD * model.d;
-        model.pos = Math.floor(model.pos + dP);
-        model.lastFrameTime = time;
         return model;
     };
 
@@ -96,10 +119,14 @@ function update_model(action: Action, model: AppState): AppState {
     };
 
     dispatch[Actions.Push] = () => {
-        model.pos = action.data === ArrowKey.Left
-            ? model.pos - model.force
-            : model.pos + model.force;
-        model.lastPushTime = Date.now();
+        switch (action.data) {
+            case Direction.Left:
+                model.acc.add(new Vector(-1 * model.push_force, 0));
+                break;
+            case Direction.Right:
+                model.acc.add(new Vector(model.push_force, 0));
+                break;
+        }
         return model;
     };
 
@@ -119,15 +146,9 @@ function update_model(action: Action, model: AppState): AppState {
     };
 
     dispatch[Actions.UpdateForce] = () => {
-        model.force = action.data;
+        model.push_force = action.data;
         return model;
     };
-
-    if (isNaN(model.pos)) {
-        model.pos = 0;
-        model.i = 0;
-        model.d = 0;
-    }
 
     return dispatch[action.type]();
 }
@@ -142,15 +163,7 @@ function main(scope) {
         .filter(evt => evt.getRaw().keyCode === 37)
         .map(evt => ({
             type: Actions.Push,
-            data: ArrowKey.Left
-        }))
-        .connect(scope.actions);
-
-    scope.events.click
-        .filter(evt => evt.getId() === 'left-btn')
-        .map(evt => ({
-            type: Actions.Push,
-            data: ArrowKey.Left
+            data: Direction.Left
         }))
         .connect(scope.actions);
 
@@ -159,15 +172,17 @@ function main(scope) {
         .filter(evt => evt.getRaw().keyCode === 39)
         .map(evt => ({
             type: Actions.Push,
-            data: ArrowKey.Right
+            data: Direction.Right
         }))
         .connect(scope.actions);
 
-    scope.events.click
-        .filter(evt => evt.getId() === 'right-btn')
+    // stopping
+    scope.events.keyup
+        .filter(evt => evt.getRaw().keyCode === 37 ||
+            evt.getRaw().keyCode === 39)
         .map(evt => ({
             type: Actions.Push,
-            data: ArrowKey.Right
+            data: Direction.None
         }))
         .connect(scope.actions);
 
@@ -243,7 +258,7 @@ function render(state) {
                 el('label', { 'for': 'inp-force' }, ['F =']),
                 el('input', {
                     'type': 'text',
-                    'value': state.force,
+                    'value': state.push_force,
                     'id': 'inp-force'
                 }, [])
             ])
@@ -254,8 +269,8 @@ function render(state) {
         'class': 'horizontal-bar',
         'id': 'push-bar'
     }, [
-            el('button', { 'class': 'push-btn', 'id': 'left-btn' }, ['Left']),
-            el('button', { 'class': 'push-btn', 'id': 'right-btn' }, ['Right'])
+            //el('button', { 'class': 'push-btn', 'id': 'left-btn' }, ['Left']),
+            //el('button', { 'class': 'push-btn', 'id': 'right-btn' }, ['Right'])
         ]);
 
     return el('div', { 'id': 'main' }, [
@@ -266,7 +281,10 @@ function render(state) {
         }, [])
             .subscribe(canvasMailbox),
         push_bar,
-        ctrl_bar
+        ctrl_bar,
+        el('p', {}, [state.pos.toString()]),
+        el('p', {}, [state.vel.toString()]),
+        el('p', {}, [state.acc.toString()])
     ]);
 }
 

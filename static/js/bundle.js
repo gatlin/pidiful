@@ -44,15 +44,16 @@
 /* 0 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__(1)], __WEBPACK_AMD_DEFINE_RESULT__ = function (require, exports, alm_1) {
+	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__(1), __webpack_require__(4)], __WEBPACK_AMD_DEFINE_RESULT__ = function (require, exports, alm_1, vector_1) {
 	    "use strict";
 	    exports.__esModule = true;
 	    var canvasMailbox = new alm_1.Mailbox(null);
-	    var ArrowKey;
-	    (function (ArrowKey) {
-	        ArrowKey[ArrowKey["Left"] = 0] = "Left";
-	        ArrowKey[ArrowKey["Right"] = 1] = "Right";
-	    })(ArrowKey || (ArrowKey = {}));
+	    var Direction;
+	    (function (Direction) {
+	        Direction[Direction["Left"] = 0] = "Left";
+	        Direction[Direction["Right"] = 1] = "Right";
+	        Direction[Direction["None"] = 2] = "None";
+	    })(Direction || (Direction = {}));
 	    ;
 	    var Actions;
 	    (function (Actions) {
@@ -68,30 +69,34 @@
 	    function new_appstate() {
 	        return {
 	            canvasCtx: null,
-	            pos: 0,
-	            desired: 0,
-	            canvasWidth: 300,
-	            canvasHeight: 200,
+	            pos: new vector_1.Vector(0, 600 - 32),
+	            vel: new vector_1.Vector(0, 0),
+	            acc: new vector_1.Vector(0, 0),
+	            mass: 1,
+	            radius: 32,
+	            desired: new vector_1.Vector(0, 0),
+	            canvasWidth: 800,
+	            canvasHeight: 600,
 	            i: 0,
 	            d: 0,
 	            kP: 0.2,
 	            kI: 0.01,
 	            kD: 0.5,
 	            lastFrameTime: Date.now(),
-	            force: 20,
-	            lastPushTime: Date.now()
+	            push_force: 1000
 	        };
 	    }
 	    function draw(model) {
 	        var ctx = model.canvasCtx;
 	        var cW = model.canvasWidth;
 	        var cH = model.canvasHeight;
-	        // draw a line
+	        var r = model.radius - 7;
+	        // draw a circle
 	        ctx.clearRect(0, 0, cW, cH);
 	        ctx.beginPath();
-	        ctx.lineWidth = 14;
+	        ctx.lineWidth = 7;
 	        ctx.strokeStyle = '#325FA2';
-	        ctx.arc((cW / 2) + model.pos, cH / 2, 50, 0, Math.PI * 2, true);
+	        ctx.arc((cW / 2) + model.pos.getX(), (cH - model.pos.getY()), r, 0, Math.PI * 2, true);
 	        ctx.stroke();
 	    }
 	    function update_model(action, model) {
@@ -100,17 +105,24 @@
 	            if (!model.canvasCtx) {
 	                return model;
 	            }
-	            var time = Date.now();
-	            var dt = time - model.lastFrameTime;
+	            var currentTime = Date.now();
+	            var dt = (currentTime - model.lastFrameTime) / 1000; // in seconds
+	            var fy = new vector_1.Vector(0, -1000);
+	            var delta = model.vel.clone().multiplyScalar(dt);
+	            model.pos.add(delta);
+	            var avg_acc = fy.add(model.acc).divideScalar(2);
+	            model.vel.add(avg_acc.multiplyScalar(dt));
+	            if (model.pos.y - model.radius < 0) {
+	                model.vel.y *= -0.5;
+	                model.pos.y = model.radius;
+	            }
+	            var bound_left = -1 * (model.canvasWidth / 2);
+	            if (model.pos.x < bound_left) {
+	                model.vel.x *= -0.5;
+	                model.pos.x = bound_left;
+	            }
+	            model.lastFrameTime = currentTime;
 	            draw(model);
-	            var e_t = model.desired - model.pos;
-	            model.i = Math.floor(model.i + e_t * dt);
-	            model.d = Math.floor((e_t - model.d) / dt);
-	            var dP = model.kP * e_t +
-	                model.kI * model.i +
-	                model.kD * model.d;
-	            model.pos = Math.floor(model.pos + dP);
-	            model.lastFrameTime = time;
 	            return model;
 	        };
 	        dispatch[Actions.CanvasUpdate] = function () {
@@ -119,10 +131,14 @@
 	            return model;
 	        };
 	        dispatch[Actions.Push] = function () {
-	            model.pos = action.data === ArrowKey.Left
-	                ? model.pos - model.force
-	                : model.pos + model.force;
-	            model.lastPushTime = Date.now();
+	            switch (action.data) {
+	                case Direction.Left:
+	                    model.acc.add(new vector_1.Vector(-1 * model.push_force, 0));
+	                    break;
+	                case Direction.Right:
+	                    model.acc.add(new vector_1.Vector(model.push_force, 0));
+	                    break;
+	            }
 	            return model;
 	        };
 	        dispatch[Actions.UpdateKP] = function () {
@@ -138,14 +154,9 @@
 	            return model;
 	        };
 	        dispatch[Actions.UpdateForce] = function () {
-	            model.force = action.data;
+	            model.push_force = action.data;
 	            return model;
 	        };
-	        if (isNaN(model.pos)) {
-	            model.pos = 0;
-	            model.i = 0;
-	            model.d = 0;
-	        }
 	        return dispatch[action.type]();
 	    }
 	    function main(scope) {
@@ -157,14 +168,7 @@
 	            .filter(function (evt) { return evt.getRaw().keyCode === 37; })
 	            .map(function (evt) { return ({
 	            type: Actions.Push,
-	            data: ArrowKey.Left
-	        }); })
-	            .connect(scope.actions);
-	        scope.events.click
-	            .filter(function (evt) { return evt.getId() === 'left-btn'; })
-	            .map(function (evt) { return ({
-	            type: Actions.Push,
-	            data: ArrowKey.Left
+	            data: Direction.Left
 	        }); })
 	            .connect(scope.actions);
 	        // right arrow
@@ -172,14 +176,16 @@
 	            .filter(function (evt) { return evt.getRaw().keyCode === 39; })
 	            .map(function (evt) { return ({
 	            type: Actions.Push,
-	            data: ArrowKey.Right
+	            data: Direction.Right
 	        }); })
 	            .connect(scope.actions);
-	        scope.events.click
-	            .filter(function (evt) { return evt.getId() === 'right-btn'; })
+	        // stopping
+	        scope.events.keyup
+	            .filter(function (evt) { return evt.getRaw().keyCode === 37 ||
+	            evt.getRaw().keyCode === 39; })
 	            .map(function (evt) { return ({
 	            type: Actions.Push,
-	            data: ArrowKey.Right
+	            data: Direction.None
 	        }); })
 	            .connect(scope.actions);
 	        scope.events.change
@@ -251,7 +257,7 @@
 	                alm_1.el('label', { 'for': 'inp-force' }, ['F =']),
 	                alm_1.el('input', {
 	                    'type': 'text',
-	                    'value': state.force,
+	                    'value': state.push_force,
 	                    'id': 'inp-force'
 	                }, [])
 	            ])
@@ -259,10 +265,7 @@
 	        var push_bar = alm_1.el('div', {
 	            'class': 'horizontal-bar',
 	            'id': 'push-bar'
-	        }, [
-	            alm_1.el('button', { 'class': 'push-btn', 'id': 'left-btn' }, ['Left']),
-	            alm_1.el('button', { 'class': 'push-btn', 'id': 'right-btn' }, ['Right'])
-	        ]);
+	        }, []);
 	        return alm_1.el('div', { 'id': 'main' }, [
 	            alm_1.el('canvas', {
 	                'id': 'the_canvas',
@@ -271,7 +274,10 @@
 	            }, [])
 	                .subscribe(canvasMailbox),
 	            push_bar,
-	            ctrl_bar
+	            ctrl_bar,
+	            alm_1.el('p', {}, [state.pos.toString()]),
+	            alm_1.el('p', {}, [state.vel.toString()]),
+	            alm_1.el('p', {}, [state.acc.toString()])
 	        ]);
 	    }
 	    var app = new alm_1.App({
@@ -978,6 +984,105 @@
 	        });
 	    }
 	    exports.render = render;
+	}.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports], __WEBPACK_AMD_DEFINE_RESULT__ = function (require, exports) {
+	    "use strict";
+	    exports.__esModule = true;
+	    var Vector = (function () {
+	        function Vector(x, y) {
+	            if (x === void 0) { x = 0; }
+	            if (y === void 0) { y = 0; }
+	            this.x = x;
+	            this.y = y;
+	        }
+	        Vector.prototype.getX = function () { return this.x; };
+	        Vector.prototype.getY = function () { return this.y; };
+	        Vector.prototype.length = function () {
+	            return Math.sqrt(this.x * this.x + this.y * this.y);
+	        };
+	        Vector.prototype.add = function (vec) {
+	            this.x += vec.x;
+	            this.y += vec.y;
+	            return this;
+	        };
+	        Vector.prototype.subtract = function (vec) {
+	            this.x -= vec.x;
+	            this.y -= vec.y;
+	            return this;
+	        };
+	        Vector.prototype.multiply = function (vec) {
+	            this.x *= vec.x;
+	            this.y *= vec.y;
+	            return this;
+	        };
+	        Vector.prototype.divide = function (vec) {
+	            this.x /= vec.x;
+	            this.y /= vec.y;
+	            return this;
+	        };
+	        Vector.prototype.addScalar = function (scalar) {
+	            this.x += scalar;
+	            this.y += scalar;
+	            return this;
+	        };
+	        Vector.prototype.multiplyScalar = function (scalar) {
+	            this.x *= scalar;
+	            this.y *= scalar;
+	            return this;
+	        };
+	        Vector.prototype.divideScalar = function (scalar) {
+	            this.x /= scalar;
+	            this.y /= scalar;
+	            return this;
+	        };
+	        Vector.prototype.invertX = function () {
+	            this.x *= -1;
+	            return this;
+	        };
+	        Vector.prototype.invertY = function () {
+	            this.y *= -1;
+	            return this;
+	        };
+	        Vector.prototype.invert = function () {
+	            return this.invertX().invertY();
+	        };
+	        Vector.prototype.normalize = function () {
+	            var len = this.length();
+	            if (0 === len) {
+	                this.x = 1;
+	                this.y = 0;
+	            }
+	            else {
+	                this.divide(new Vector(len, len));
+	            }
+	            return this;
+	        };
+	        Vector.prototype.square = function () {
+	            this.x = this.x * this.x;
+	            this.y = this.y * this.y;
+	            return this;
+	        };
+	        Vector.prototype.clone = function () {
+	            return new Vector(this.x, this.y);
+	        };
+	        Vector.prototype.dot = function (vec) {
+	            return this.x * vec.x + this.y * vec.y;
+	        };
+	        Vector.prototype.cross = function (vec) {
+	            return (this.x * vec.y) - (this.y * vec.x);
+	        };
+	        Vector.prototype.toString = function () {
+	            return '<' + this.x + ' , ' + this.y + '>';
+	        };
+	        return Vector;
+	    }());
+	    exports.Vector = Vector;
 	}.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 

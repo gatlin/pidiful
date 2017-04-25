@@ -22,21 +22,14 @@ body {
 .horizontal-bar span {
     display: block;
     margin: 0 auto;
-    width: 300px;
+    width: 800px;
+    border-left: 1px solid #b9b9b9;
+    border-right: 1px solid #b9b9b9;
     }
 
 label {
     margin-right: 5px;
     }
-
-#ctrl-bar span {
-    display: block;
-    width: 300px;
-    margin: 0 auto;
-
-    border-left: 1px solid #b9b9b9;
-    border-right: 1px solid #b9b9b9;
-}
 
 #ctrl-bar span:first-child {
     border-top: 1px solid #b9b9b9;
@@ -54,7 +47,7 @@ label {
     border-top: 1px solid #b9b9b9;
     border-bottom: 1px solid #b9b9b9;
     height: 40px;
-    width: 150px;
+    width: 400px;
 }
 
 #left-btn {
