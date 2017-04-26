@@ -107,10 +107,13 @@
 	            }
 	            var currentTime = Date.now();
 	            var dt = (currentTime - model.lastFrameTime) / 1000; // in seconds
-	            var fy = new vector_1.Vector(0, -1000);
+	            model.acc.x *= 0.85;
+	            var externalForce = new vector_1.Vector(0, -1000);
 	            var delta = model.vel.clone().multiplyScalar(dt);
 	            model.pos.add(delta);
-	            var avg_acc = fy.add(model.acc).divideScalar(2);
+	            var avg_acc = externalForce
+	                .add(model.acc.clone())
+	                .divideScalar(2);
 	            model.vel.add(avg_acc.multiplyScalar(dt));
 	            if (model.pos.y - model.radius < 0) {
 	                model.vel.y *= -0.5;
@@ -118,9 +121,17 @@
 	            }
 	            var bound_left = -1 * (model.canvasWidth / 2);
 	            if (model.pos.x < bound_left) {
+	                model.pos.x = bound_left + 1;
 	                model.vel.x *= -0.5;
-	                model.pos.x = bound_left;
+	                model.acc.x *= -1;
 	            }
+	            var bound_right = model.canvasWidth / 2;
+	            if (model.pos.x > bound_right) {
+	                model.pos.x = bound_right - 1;
+	                model.vel.x *= -0.5;
+	                model.acc.x *= -1;
+	            }
+	            model.acc.multiplyScalar(0.85);
 	            model.lastFrameTime = currentTime;
 	            draw(model);
 	            return model;
