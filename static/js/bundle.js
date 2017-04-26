@@ -44,7 +44,7 @@
 /* 0 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__(1), __webpack_require__(4)], __WEBPACK_AMD_DEFINE_RESULT__ = function (require, exports, alm_1, vector_1) {
+	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__(1), __webpack_require__(4), __webpack_require__(5)], __WEBPACK_AMD_DEFINE_RESULT__ = function (require, exports, alm_1, vector_1, ball_1) {
 	    "use strict";
 	    exports.__esModule = true;
 	    var canvasMailbox = new alm_1.Mailbox(null);
@@ -52,7 +52,8 @@
 	    (function (Direction) {
 	        Direction[Direction["Left"] = 0] = "Left";
 	        Direction[Direction["Right"] = 1] = "Right";
-	        Direction[Direction["None"] = 2] = "None";
+	        Direction[Direction["Up"] = 2] = "Up";
+	        Direction[Direction["None"] = 3] = "None";
 	    })(Direction || (Direction = {}));
 	    ;
 	    var Actions;
@@ -60,44 +61,45 @@
 	        Actions[Actions["Tick"] = 0] = "Tick";
 	        Actions[Actions["CanvasUpdate"] = 1] = "CanvasUpdate";
 	        Actions[Actions["Push"] = 2] = "Push";
-	        Actions[Actions["UpdateKP"] = 3] = "UpdateKP";
-	        Actions[Actions["UpdateKI"] = 4] = "UpdateKI";
-	        Actions[Actions["UpdateKD"] = 5] = "UpdateKD";
-	        Actions[Actions["UpdateForce"] = 6] = "UpdateForce";
+	        Actions[Actions["UpdateKPx"] = 3] = "UpdateKPx";
+	        Actions[Actions["UpdateKIx"] = 4] = "UpdateKIx";
+	        Actions[Actions["UpdateKDx"] = 5] = "UpdateKDx";
+	        Actions[Actions["UpdateKPy"] = 6] = "UpdateKPy";
+	        Actions[Actions["UpdateKIy"] = 7] = "UpdateKIy";
+	        Actions[Actions["UpdateKDy"] = 8] = "UpdateKDy";
+	        Actions[Actions["UpdateForce"] = 9] = "UpdateForce";
+	        Actions[Actions["ToggleShowLog"] = 10] = "ToggleShowLog";
+	        Actions[Actions["ToggleAutoCorrect"] = 11] = "ToggleAutoCorrect";
 	    })(Actions || (Actions = {}));
 	    ;
 	    function new_appstate() {
 	        return {
 	            canvasCtx: null,
-	            pos: new vector_1.Vector(0, 600 - 32),
-	            vel: new vector_1.Vector(0, 0),
-	            acc: new vector_1.Vector(0, 0),
-	            mass: 1,
-	            radius: 32,
-	            desired: new vector_1.Vector(0, 0),
+	            ball: new ball_1.Ball(20, 1.2, new vector_1.Vector(0, 300 - 20)),
+	            desired: new vector_1.Vector(0, 20),
 	            canvasWidth: 800,
-	            canvasHeight: 600,
-	            i: 0,
-	            d: 0,
-	            kP: 0.2,
-	            kI: 0.01,
-	            kD: 0.5,
+	            canvasHeight: 300,
+	            i: new vector_1.Vector(),
+	            d: new vector_1.Vector(),
+	            kP: new vector_1.Vector(0.6, 0.8),
+	            kI: new vector_1.Vector(0.1, 0.6),
+	            kD: new vector_1.Vector(0.15, 0.05),
 	            lastFrameTime: Date.now(),
-	            push_force: 1000
+	            lastPushTime: 0,
+	            push_force: 500,
+	            show_log: false,
+	            autoCorrect: false
 	        };
 	    }
 	    function draw(model) {
 	        var ctx = model.canvasCtx;
 	        var cW = model.canvasWidth;
 	        var cH = model.canvasHeight;
-	        var r = model.radius - 7;
-	        // draw a circle
 	        ctx.clearRect(0, 0, cW, cH);
-	        ctx.beginPath();
-	        ctx.lineWidth = 7;
-	        ctx.strokeStyle = '#325FA2';
-	        ctx.arc((cW / 2) + model.pos.getX(), (cH - model.pos.getY()), r, 0, Math.PI * 2, true);
-	        ctx.stroke();
+	        model.ball.draw(ctx, cW, cH);
+	    }
+	    function valid_number(n) {
+	        return (!isNaN(n));
 	    }
 	    function update_model(action, model) {
 	        var dispatch = {};
@@ -106,32 +108,30 @@
 	                return model;
 	            }
 	            var currentTime = Date.now();
-	            var dt = (currentTime - model.lastFrameTime) / 1000; // in seconds
-	            model.acc.x *= 0.85;
-	            var externalForce = new vector_1.Vector(0, -1000);
-	            var delta = model.vel.clone().multiplyScalar(dt);
-	            model.pos.add(delta);
-	            var avg_acc = externalForce
-	                .add(model.acc.clone())
-	                .divideScalar(2);
-	            model.vel.add(avg_acc.multiplyScalar(dt));
-	            if (model.pos.y - model.radius < 0) {
-	                model.vel.y *= -0.5;
-	                model.pos.y = model.radius;
-	            }
+	            var dt_orig = (currentTime - model.lastFrameTime);
+	            var dt = dt_orig / 1000;
 	            var bound_left = -1 * (model.canvasWidth / 2);
-	            if (model.pos.x < bound_left) {
-	                model.pos.x = bound_left + 1;
-	                model.vel.x *= -0.5;
-	                model.acc.x *= -1;
-	            }
 	            var bound_right = model.canvasWidth / 2;
-	            if (model.pos.x > bound_right) {
-	                model.pos.x = bound_right - 1;
-	                model.vel.x *= -0.5;
-	                model.acc.x *= -1;
+	            var gravity = new vector_1.Vector(0, -1000);
+	            /* now for the PID calculations */
+	            if (model.autoCorrect) {
+	                var ball = model.ball;
+	                var err_t = model.desired.clone()
+	                    .subtract(ball.pos);
+	                model.i.add(err_t.clone().multiplyScalar(dt_orig));
+	                model.d = err_t.clone().subtract(model.d).divideScalar(dt_orig);
+	                ball.acc = err_t
+	                    .multiply(model.kP)
+	                    .add(model.kI.clone().multiply(model.i))
+	                    .add(model.kD.clone().multiply(model.d))
+	                    .divideScalar(1000);
 	            }
-	            model.acc.multiplyScalar(0.85);
+	            model.ball = model.ball
+	                .update(dt, gravity)
+	                .bounds_check(model.canvasHeight, bound_right, 0, bound_left);
+	            if (!model.autoCorrect && currentTime - model.lastPushTime > 500) {
+	                model.ball.acc.multiplyScalar(0.75);
+	            }
 	            model.lastFrameTime = currentTime;
 	            draw(model);
 	            return model;
@@ -142,30 +142,63 @@
 	            return model;
 	        };
 	        dispatch[Actions.Push] = function () {
+	            if (model.autoCorrect) {
+	                return model;
+	            }
 	            switch (action.data) {
 	                case Direction.Left:
-	                    model.acc.add(new vector_1.Vector(-1 * model.push_force, 0));
+	                    model.ball.acc.add(new vector_1.Vector(-1 * model.push_force, 0));
 	                    break;
 	                case Direction.Right:
-	                    model.acc.add(new vector_1.Vector(model.push_force, 0));
+	                    model.ball.acc.add(new vector_1.Vector(model.push_force, 0));
+	                    break;
+	                case Direction.Up:
+	                    model.ball.acc.add(new vector_1.Vector(0, model.push_force));
+	                    break;
+	                case Direction.None:
+	                    model.lastPushTime = Date.now();
 	                    break;
 	            }
 	            return model;
 	        };
-	        dispatch[Actions.UpdateKP] = function () {
-	            model.kP = action.data;
+	        dispatch[Actions.UpdateKPx] = function () {
+	            model.kP.x = action.data;
 	            return model;
 	        };
-	        dispatch[Actions.UpdateKI] = function () {
-	            model.kI = action.data;
+	        dispatch[Actions.UpdateKIx] = function () {
+	            model.kI.x = action.data;
 	            return model;
 	        };
-	        dispatch[Actions.UpdateKD] = function () {
-	            model.kD = action.data;
+	        dispatch[Actions.UpdateKDx] = function () {
+	            model.kD.x = action.data;
+	            return model;
+	        };
+	        dispatch[Actions.UpdateKPy] = function () {
+	            model.kP.y = action.data;
+	            return model;
+	        };
+	        dispatch[Actions.UpdateKIy] = function () {
+	            model.kI.y = action.data;
+	            return model;
+	        };
+	        dispatch[Actions.UpdateKDy] = function () {
+	            model.kD.y = action.data;
 	            return model;
 	        };
 	        dispatch[Actions.UpdateForce] = function () {
 	            model.push_force = action.data;
+	            return model;
+	        };
+	        dispatch[Actions.ToggleShowLog] = function () {
+	            model.show_log = !model.show_log;
+	            return model;
+	        };
+	        dispatch[Actions.ToggleAutoCorrect] = function () {
+	            model.autoCorrect = !model.autoCorrect;
+	            if (model.autoCorrect) {
+	                model.i = new vector_1.Vector();
+	                model.d = new vector_1.Vector();
+	            }
 	            return model;
 	        };
 	        return dispatch[action.type]();
@@ -190,41 +223,93 @@
 	            data: Direction.Right
 	        }); })
 	            .connect(scope.actions);
-	        // stopping
+	        // up arrow
+	        scope.events.keydown
+	            .filter(function (evt) { return evt.getRaw().keyCode === 38; })
+	            .map(function (evt) { return ({
+	            type: Actions.Push,
+	            data: Direction.Up
+	        }); })
+	            .connect(scope.actions);
 	        scope.events.keyup
-	            .filter(function (evt) { return evt.getRaw().keyCode === 37 ||
-	            evt.getRaw().keyCode === 39; })
 	            .map(function (evt) { return ({
 	            type: Actions.Push,
 	            data: Direction.None
 	        }); })
 	            .connect(scope.actions);
 	        scope.events.change
-	            .filter(function (evt) { return evt.getId() === 'inp-kP'; })
-	            .map(function (evt) { return ({
-	            type: Actions.UpdateKP,
-	            data: evt.getValue()
+	            .filter(function (evt) { return evt.getId() === 'inp-kP-x'; })
+	            .map(function (evt) { return parseFloat(evt.getValue()); })
+	            .filter(valid_number)
+	            .map(function (n) { return ({
+	            type: Actions.UpdateKPx,
+	            data: n
 	        }); })
 	            .connect(scope.actions);
 	        scope.events.change
-	            .filter(function (evt) { return evt.getId() === 'inp-kI'; })
-	            .map(function (evt) { return ({
-	            type: Actions.UpdateKI,
-	            data: evt.getValue()
+	            .filter(function (evt) { return evt.getId() === 'inp-kI-x'; })
+	            .map(function (evt) { return parseFloat(evt.getValue()); })
+	            .filter(valid_number)
+	            .map(function (n) { return ({
+	            type: Actions.UpdateKIx,
+	            data: n
 	        }); })
 	            .connect(scope.actions);
 	        scope.events.change
-	            .filter(function (evt) { return evt.getId() === 'inp-kD'; })
-	            .map(function (evt) { return ({
-	            type: Actions.UpdateKD,
-	            data: evt.getValue()
+	            .filter(function (evt) { return evt.getId() === 'inp-kD-x'; })
+	            .map(function (evt) { return parseFloat(evt.getValue()); })
+	            .filter(valid_number)
+	            .map(function (n) { return ({
+	            type: Actions.UpdateKDx,
+	            data: n
+	        }); })
+	            .connect(scope.actions);
+	        scope.events.change
+	            .filter(function (evt) { return evt.getId() === 'inp-kP-y'; })
+	            .map(function (evt) { return parseFloat(evt.getValue()); })
+	            .filter(valid_number)
+	            .map(function (n) { return ({
+	            type: Actions.UpdateKPy,
+	            data: n
+	        }); })
+	            .connect(scope.actions);
+	        scope.events.change
+	            .filter(function (evt) { return evt.getId() === 'inp-kI-y'; })
+	            .map(function (evt) { return parseFloat(evt.getValue()); })
+	            .filter(valid_number)
+	            .map(function (n) { return ({
+	            type: Actions.UpdateKIy,
+	            data: n
+	        }); })
+	            .connect(scope.actions);
+	        scope.events.change
+	            .filter(function (evt) { return evt.getId() === 'inp-kD-y'; })
+	            .map(function (evt) { return parseFloat(evt.getValue()); })
+	            .filter(valid_number)
+	            .map(function (n) { return ({
+	            type: Actions.UpdateKDy,
+	            data: n
 	        }); })
 	            .connect(scope.actions);
 	        scope.events.change
 	            .filter(function (evt) { return evt.getId() === 'inp-force'; })
-	            .map(function (evt) { return ({
+	            .map(function (evt) { return parseFloat(evt.getValue()); })
+	            .filter(valid_number)
+	            .map(function (n) { return ({
 	            type: Actions.UpdateForce,
-	            data: parseInt(evt.getValue())
+	            data: n
+	        }); })
+	            .connect(scope.actions);
+	        scope.events.change
+	            .filter(function (evt) { return evt.getId() === 'show-log-ctrl'; })
+	            .map(function (evt) { return ({
+	            type: Actions.ToggleShowLog
+	        }); })
+	            .connect(scope.actions);
+	        scope.events.change
+	            .filter(function (evt) { return evt.getId() === 'auto-correct-ctrl'; })
+	            .map(function (evt) { return ({
+	            type: Actions.ToggleAutoCorrect
 	        }); })
 	            .connect(scope.actions);
 	        canvasMailbox
@@ -241,27 +326,45 @@
 	            'id': 'ctrl-bar'
 	        }, [
 	            alm_1.el('span', {}, [
-	                alm_1.el('label', { 'for': 'inp-kP' }, ['kP =']),
+	                alm_1.el('label', { 'for': 'inp-kP-x' }, ['kP.x =']),
 	                alm_1.el('input', {
 	                    'type': 'text',
-	                    'value': state.kP,
-	                    'id': 'inp-kP'
+	                    'value': state.kP.x,
+	                    'id': 'inp-kP-x'
+	                }, []),
+	                alm_1.el('label', { 'for': 'inp-kP-y' }, ['kP.y =']),
+	                alm_1.el('input', {
+	                    'type': 'text',
+	                    'value': state.kP.y,
+	                    'id': 'inp-kP-y'
 	                }, [])
 	            ]),
 	            alm_1.el('span', {}, [
-	                alm_1.el('label', { 'for': 'inp-kI' }, ['kI =']),
+	                alm_1.el('label', { 'for': 'inp-kI-x' }, ['kI.x =']),
 	                alm_1.el('input', {
 	                    'type': 'text',
-	                    'value': state.kI,
-	                    'id': 'inp-kI'
+	                    'value': state.kI.x,
+	                    'id': 'inp-kI-x'
+	                }, []),
+	                alm_1.el('label', { 'for': 'inp-kI-y' }, ['kI.y =']),
+	                alm_1.el('input', {
+	                    'type': 'text',
+	                    'value': state.kI.y,
+	                    'id': 'inp-kI-y'
 	                }, [])
 	            ]),
 	            alm_1.el('span', {}, [
-	                alm_1.el('label', { 'for': 'inp-kD' }, ['kD =']),
+	                alm_1.el('label', { 'for': 'inp-kD-x' }, ['kD.x =']),
 	                alm_1.el('input', {
 	                    'type': 'text',
-	                    'value': state.kD,
-	                    'id': 'inp-kD'
+	                    'value': state.kD.x,
+	                    'id': 'inp-kD-x'
+	                }, []),
+	                alm_1.el('label', { 'for': 'inp-kD-y' }, ['kD.y =']),
+	                alm_1.el('input', {
+	                    'type': 'text',
+	                    'value': state.kD.y,
+	                    'id': 'inp-kD-y'
 	                }, [])
 	            ]),
 	            alm_1.el('span', {}, [
@@ -277,6 +380,29 @@
 	            'class': 'horizontal-bar',
 	            'id': 'push-bar'
 	        }, []);
+	        var log_bar = state.show_log
+	            ? alm_1.el('span', {}, [
+	                alm_1.el('p', {}, [state.ball.pos.toString()]),
+	                alm_1.el('p', {}, [state.ball.vel.toString()]),
+	                alm_1.el('p', {}, [state.ball.acc.toString()])
+	            ])
+	            : alm_1.el('span', {}, []);
+	        var show_log_ctrl_attrs = {
+	            'type': 'checkbox',
+	            'id': 'show-log-ctrl'
+	        };
+	        if (state.show_log) {
+	            show_log_ctrl_attrs['checked'] = 'checked';
+	        }
+	        var show_log_ctrl = alm_1.el('input', show_log_ctrl_attrs, []);
+	        var auto_correct_attrs = {
+	            'type': 'checkbox',
+	            'id': 'auto-correct-ctrl'
+	        };
+	        if (state.autoCorrect) {
+	            auto_correct_attrs['checked'] = 'checked';
+	        }
+	        var auto_correct_ctrl = alm_1.el('input', auto_correct_attrs, []);
 	        return alm_1.el('div', { 'id': 'main' }, [
 	            alm_1.el('canvas', {
 	                'id': 'the_canvas',
@@ -284,11 +410,11 @@
 	                'width': state.canvasWidth
 	            }, [])
 	                .subscribe(canvasMailbox),
+	            auto_correct_ctrl,
 	            push_bar,
 	            ctrl_bar,
-	            alm_1.el('p', {}, [state.pos.toString()]),
-	            alm_1.el('p', {}, [state.vel.toString()]),
-	            alm_1.el('p', {}, [state.acc.toString()])
+	            show_log_ctrl,
+	            log_bar,
 	        ]);
 	    }
 	    var app = new alm_1.App({
@@ -1042,6 +1168,11 @@
 	            this.y += scalar;
 	            return this;
 	        };
+	        Vector.prototype.subtractScalar = function (scalar) {
+	            this.x -= scalar;
+	            this.y -= scalar;
+	            return this;
+	        };
 	        Vector.prototype.multiplyScalar = function (scalar) {
 	            this.x *= scalar;
 	            this.y *= scalar;
@@ -1050,6 +1181,11 @@
 	        Vector.prototype.divideScalar = function (scalar) {
 	            this.x /= scalar;
 	            this.y /= scalar;
+	            return this;
+	        };
+	        Vector.prototype.floor = function () {
+	            this.x = Math.floor(this.x);
+	            this.y = Math.floor(this.y);
 	            return this;
 	        };
 	        Vector.prototype.invertX = function () {
@@ -1094,6 +1230,85 @@
 	        return Vector;
 	    }());
 	    exports.Vector = Vector;
+	}.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__(4)], __WEBPACK_AMD_DEFINE_RESULT__ = function (require, exports, vector_1) {
+	    "use strict";
+	    exports.__esModule = true;
+	    var Ball = (function () {
+	        function Ball(radius, mass, pos, vel, acc) {
+	            if (vel === void 0) { vel = new vector_1.Vector(0, 0); }
+	            if (acc === void 0) { acc = new vector_1.Vector(0, 0); }
+	            this.radius = radius;
+	            this.mass = mass;
+	            this.pos = pos;
+	            this.vel = vel;
+	            this.acc = acc;
+	        }
+	        Ball.prototype.update = function (dt, otherForces) {
+	            this.pos.add(this.vel.clone()
+	                .multiplyScalar(dt)
+	                .add(this.acc.clone()
+	                .multiplyScalar(0.5 * dt * dt)));
+	            var horiz_multiplier = this.vel.x === 0
+	                ? 0 : this.vel.x > 0
+	                ? -1
+	                : 1;
+	            var vert_multiplier = this.vel.y === 0
+	                ? 0 : this.vel.y > 0
+	                ? -1
+	                : 1;
+	            var drag_area = Math.PI * this.radius * this.radius;
+	            var drag_coefficient = drag_area * 1.2 * 0.47 / 100;
+	            var avg_acc = otherForces
+	                .add(new vector_1.Vector(horiz_multiplier * drag_coefficient, vert_multiplier * drag_coefficient))
+	                .divideScalar(this.mass)
+	                .add(this.acc.clone())
+	                .divideScalar(2);
+	            this.vel.add(avg_acc.multiplyScalar(dt));
+	            if (Math.abs(this.acc.x) < 0.0001) {
+	                this.acc.floor();
+	            }
+	            if (Math.abs(this.vel.x) < 0.001 ||
+	                Math.abs(this.vel.y) < 0.001) {
+	                this.vel.floor();
+	            }
+	            return this;
+	        };
+	        Ball.prototype.bounds_check = function (t, r, b, l) {
+	            if (this.pos.y + this.radius > t) {
+	                this.pos.y = t - this.radius;
+	                this.vel.y *= -0.5;
+	            }
+	            if (this.pos.x + this.radius > r) {
+	                this.pos.x = r - this.radius - 1;
+	                this.vel.x *= -0.5;
+	            }
+	            if (this.pos.y - this.radius < b) {
+	                this.vel.y *= -0.5;
+	                this.pos.y = this.radius;
+	            }
+	            if (this.pos.x - this.radius < l) {
+	                this.pos.x = l + this.radius + 1;
+	                this.vel.x *= -0.5;
+	            }
+	            return this;
+	        };
+	        Ball.prototype.draw = function (ctx, cW, cH) {
+	            ctx.beginPath();
+	            ctx.lineWidth = 7;
+	            ctx.strokeStyle = '#325FA2';
+	            ctx.arc((cW / 2) + this.pos.x, (cH - this.pos.y), this.radius - 7, 0, Math.PI * 2, true);
+	            ctx.stroke();
+	        };
+	        return Ball;
+	    }());
+	    exports.Ball = Ball;
 	}.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 

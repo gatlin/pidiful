@@ -1,10 +1,13 @@
 import { App, Mailbox, el } from './alm/alm';
 import { Vector } from './vector';
+import { Ball } from './ball';
+
 const canvasMailbox = new Mailbox<HTMLElement | null>(null);
 
 enum Direction {
     Left,
     Right,
+    Up,
     None
 };
 
@@ -12,29 +15,33 @@ enum Actions {
     Tick,
     CanvasUpdate,
     Push,
-    UpdateKP,
-    UpdateKI,
-    UpdateKD,
-    UpdateForce
+    UpdateKPx,
+    UpdateKIx,
+    UpdateKDx,
+    UpdateKPy,
+    UpdateKIy,
+    UpdateKDy,
+    UpdateForce,
+    ToggleShowLog,
+    ToggleAutoCorrect
 };
 
 type AppState = {
     canvasCtx: any;
-    pos: Vector;
-    vel: Vector;
-    acc: Vector;
-    mass: number;
-    radius: number;
+    ball: Ball;
     desired: Vector;
     canvasWidth: number;
     canvasHeight: number;
-    i: number;
-    d: number;
-    kP: number;
-    kI: number;
-    kD: number;
+    i: Vector;
+    d: Vector;
+    kP: Vector;
+    kI: Vector;
+    kD: Vector;
     lastFrameTime: number;
+    lastPushTime: number;
     push_force: number;
+    show_log: boolean;
+    autoCorrect: boolean;
 };
 
 type Action = {
@@ -45,21 +52,20 @@ type Action = {
 function new_appstate(): AppState {
     return {
         canvasCtx: null,
-        pos: new Vector(0, 600 - 32),
-        vel: new Vector(0, 0),
-        acc: new Vector(0, 0),
-        mass: 1,
-        radius: 32,
-        desired: new Vector(0, 0),
+        ball: new Ball(20, 1.2, new Vector(0, 300 - 20)),
+        desired: new Vector(0, 20),
         canvasWidth: 800,
-        canvasHeight: 600,
-        i: 0,
-        d: 0,
-        kP: 0.2,
-        kI: 0.01,
-        kD: 0.5,
+        canvasHeight: 300,
+        i: new Vector(),
+        d: new Vector(),
+        kP: new Vector(0.6, 0.8),
+        kI: new Vector(0.1, 0.6),
+        kD: new Vector(0.15, 0.05),
         lastFrameTime: Date.now(),
-        push_force: 1000
+        lastPushTime: 0,
+        push_force: 500,
+        show_log: false,
+        autoCorrect: false
     };
 }
 
@@ -67,16 +73,12 @@ function draw(model) {
     const ctx = model.canvasCtx;
     const cW = model.canvasWidth;
     const cH = model.canvasHeight;
-    const r = model.radius - 7;
-
-    // draw a circle
     ctx.clearRect(0, 0, cW, cH);
-    ctx.beginPath();
-    ctx.lineWidth = 7;
-    ctx.strokeStyle = '#325FA2';
-    ctx.arc((cW / 2) + model.pos.getX(),
-        (cH - model.pos.getY()), r, 0, Math.PI * 2, true);
-    ctx.stroke();
+    model.ball.draw(ctx, cW, cH);
+}
+
+function valid_number(n) {
+    return (!isNaN(n));
 }
 
 function update_model(action: Action, model: AppState): AppState {
@@ -86,41 +88,37 @@ function update_model(action: Action, model: AppState): AppState {
         if (!model.canvasCtx) { return model; }
 
         const currentTime = Date.now();
-        const dt = (currentTime - model.lastFrameTime) / 1000; // in seconds
-
-        model.acc.x *= 0.85;
-
-        const externalForce = new Vector(0, -1000);
-
-        const delta = model.vel.clone().multiplyScalar(dt);
-        model.pos.add(delta);
-
-        const avg_acc = externalForce
-            .add(model.acc.clone())
-            .divideScalar(2);
-
-        model.vel.add(avg_acc.multiplyScalar(dt));
-
-        if (model.pos.y - model.radius < 0) {
-            model.vel.y *= -0.5;
-            model.pos.y = model.radius;
-        }
+        const dt_orig = (currentTime - model.lastFrameTime);
+        const dt = dt_orig / 1000;
 
         const bound_left = -1 * (model.canvasWidth / 2);
-        if (model.pos.x < bound_left) {
-            model.pos.x = bound_left + 1;
-            model.vel.x *= -0.5;
-            model.acc.x *= -1;
-        }
-
         const bound_right = model.canvasWidth / 2;
-        if (model.pos.x > bound_right) {
-            model.pos.x = bound_right - 1;
-            model.vel.x *= -0.5;
-            model.acc.x *= -1;
+
+        const gravity = new Vector(0, -1000);
+
+        /* now for the PID calculations */
+        if (model.autoCorrect) {
+            const ball = model.ball;
+            const err_t = model.desired.clone()
+                .subtract(ball.pos);
+
+            model.i.add(err_t.clone().multiplyScalar(dt_orig));
+            model.d = err_t.clone().subtract(model.d).divideScalar(dt_orig);
+
+            ball.acc = err_t
+                .multiply(model.kP)
+                .add(model.kI.clone().multiply(model.i))
+                .add(model.kD.clone().multiply(model.d))
+                .divideScalar(1000);
         }
 
-        model.acc.multiplyScalar(0.85);
+        model.ball = model.ball
+            .update(dt, gravity)
+            .bounds_check(model.canvasHeight, bound_right, 0, bound_left);
+
+        if (!model.autoCorrect && currentTime - model.lastPushTime > 500) {
+            model.ball.acc.multiplyScalar(0.75);
+        }
 
         model.lastFrameTime = currentTime;
         draw(model);
@@ -134,29 +132,55 @@ function update_model(action: Action, model: AppState): AppState {
     };
 
     dispatch[Actions.Push] = () => {
+        if (model.autoCorrect) {
+            return model;
+        }
         switch (action.data) {
             case Direction.Left:
-                model.acc.add(new Vector(-1 * model.push_force, 0));
+                model.ball.acc.add(new Vector(-1 * model.push_force, 0));
                 break;
             case Direction.Right:
-                model.acc.add(new Vector(model.push_force, 0));
+                model.ball.acc.add(new Vector(model.push_force, 0));
                 break;
+
+            case Direction.Up:
+                model.ball.acc.add(new Vector(0, model.push_force));
+                break;
+
+            case Direction.None:
+                model.lastPushTime = Date.now();
+                break
         }
         return model;
     };
 
-    dispatch[Actions.UpdateKP] = () => {
-        model.kP = action.data;
+    dispatch[Actions.UpdateKPx] = () => {
+        model.kP.x = action.data;
         return model;
     };
 
-    dispatch[Actions.UpdateKI] = () => {
-        model.kI = action.data;
+    dispatch[Actions.UpdateKIx] = () => {
+        model.kI.x = action.data;
         return model;
     };
 
-    dispatch[Actions.UpdateKD] = () => {
-        model.kD = action.data;
+    dispatch[Actions.UpdateKDx] = () => {
+        model.kD.x = action.data;
+        return model;
+    };
+
+    dispatch[Actions.UpdateKPy] = () => {
+        model.kP.y = action.data;
+        return model;
+    };
+
+    dispatch[Actions.UpdateKIy] = () => {
+        model.kI.y = action.data;
+        return model;
+    };
+
+    dispatch[Actions.UpdateKDy] = () => {
+        model.kD.y = action.data;
         return model;
     };
 
@@ -164,6 +188,20 @@ function update_model(action: Action, model: AppState): AppState {
         model.push_force = action.data;
         return model;
     };
+
+    dispatch[Actions.ToggleShowLog] = () => {
+        model.show_log = !model.show_log;
+        return model;
+    }
+
+    dispatch[Actions.ToggleAutoCorrect] = () => {
+        model.autoCorrect = !model.autoCorrect;
+        if (model.autoCorrect) {
+            model.i = new Vector();
+            model.d = new Vector();
+        }
+        return model;
+    }
 
     return dispatch[action.type]();
 }
@@ -191,10 +229,16 @@ function main(scope) {
         }))
         .connect(scope.actions);
 
-    // stopping
+    // up arrow
+    scope.events.keydown
+        .filter(evt => evt.getRaw().keyCode === 38)
+        .map(evt => ({
+            type: Actions.Push,
+            data: Direction.Up
+        }))
+        .connect(scope.actions);
+
     scope.events.keyup
-        .filter(evt => evt.getRaw().keyCode === 37 ||
-            evt.getRaw().keyCode === 39)
         .map(evt => ({
             type: Actions.Push,
             data: Direction.None
@@ -202,34 +246,86 @@ function main(scope) {
         .connect(scope.actions);
 
     scope.events.change
-        .filter(evt => evt.getId() === 'inp-kP')
-        .map(evt => ({
-            type: Actions.UpdateKP,
-            data: evt.getValue()
+        .filter(evt => evt.getId() === 'inp-kP-x')
+        .map(evt => parseFloat(evt.getValue()))
+        .filter(valid_number)
+        .map(n => ({
+            type: Actions.UpdateKPx,
+            data: n
         }))
         .connect(scope.actions);
 
     scope.events.change
-        .filter(evt => evt.getId() === 'inp-kI')
-        .map(evt => ({
-            type: Actions.UpdateKI,
-            data: evt.getValue()
+        .filter(evt => evt.getId() === 'inp-kI-x')
+        .map(evt => parseFloat(evt.getValue()))
+        .filter(valid_number)
+        .map(n => ({
+            type: Actions.UpdateKIx,
+            data: n
         }))
         .connect(scope.actions);
 
     scope.events.change
-        .filter(evt => evt.getId() === 'inp-kD')
-        .map(evt => ({
-            type: Actions.UpdateKD,
-            data: evt.getValue()
+        .filter(evt => evt.getId() === 'inp-kD-x')
+        .map(evt => parseFloat(evt.getValue()))
+        .filter(valid_number)
+        .map(n => ({
+            type: Actions.UpdateKDx,
+            data: n
+        }))
+        .connect(scope.actions);
+
+    scope.events.change
+        .filter(evt => evt.getId() === 'inp-kP-y')
+        .map(evt => parseFloat(evt.getValue()))
+        .filter(valid_number)
+        .map(n => ({
+            type: Actions.UpdateKPy,
+            data: n
+        }))
+        .connect(scope.actions);
+
+    scope.events.change
+        .filter(evt => evt.getId() === 'inp-kI-y')
+        .map(evt => parseFloat(evt.getValue()))
+        .filter(valid_number)
+        .map(n => ({
+            type: Actions.UpdateKIy,
+            data: n
+        }))
+        .connect(scope.actions);
+
+    scope.events.change
+        .filter(evt => evt.getId() === 'inp-kD-y')
+        .map(evt => parseFloat(evt.getValue()))
+        .filter(valid_number)
+        .map(n => ({
+            type: Actions.UpdateKDy,
+            data: n
         }))
         .connect(scope.actions);
 
     scope.events.change
         .filter(evt => evt.getId() === 'inp-force')
-        .map(evt => ({
+        .map(evt => parseFloat(evt.getValue()))
+        .filter(valid_number)
+        .map(n => ({
             type: Actions.UpdateForce,
-            data: parseInt(evt.getValue())
+            data: n
+        }))
+        .connect(scope.actions);
+
+    scope.events.change
+        .filter(evt => evt.getId() === 'show-log-ctrl')
+        .map(evt => ({
+            type: Actions.ToggleShowLog
+        }))
+        .connect(scope.actions);
+
+    scope.events.change
+        .filter(evt => evt.getId() === 'auto-correct-ctrl')
+        .map(evt => ({
+            type: Actions.ToggleAutoCorrect
         }))
         .connect(scope.actions);
 
@@ -249,26 +345,47 @@ function render(state) {
         'id': 'ctrl-bar'
     }, [
             el('span', {}, [
-                el('label', { 'for': 'inp-kP' }, ['kP =']),
+                el('label', { 'for': 'inp-kP-x' }, ['kP.x =']),
                 el('input', {
                     'type': 'text',
-                    'value': state.kP,
-                    'id': 'inp-kP'
-                }, [])]),
+                    'value': state.kP.x,
+                    'id': 'inp-kP-x'
+                }, []),
+                el('label', { 'for': 'inp-kP-y' }, ['kP.y =']),
+                el('input', {
+                    'type': 'text',
+                    'value': state.kP.y,
+                    'id': 'inp-kP-y'
+                }, [])
+            ]),
             el('span', {}, [
-                el('label', { 'for': 'inp-kI' }, ['kI =']),
+                el('label', { 'for': 'inp-kI-x' }, ['kI.x =']),
                 el('input', {
                     'type': 'text',
-                    'value': state.kI,
-                    'id': 'inp-kI'
-                }, [])]),
+                    'value': state.kI.x,
+                    'id': 'inp-kI-x'
+                }, []),
+                el('label', { 'for': 'inp-kI-y' }, ['kI.y =']),
+                el('input', {
+                    'type': 'text',
+                    'value': state.kI.y,
+                    'id': 'inp-kI-y'
+                }, [])
+            ]),
             el('span', {}, [
-                el('label', { 'for': 'inp-kD' }, ['kD =']),
+                el('label', { 'for': 'inp-kD-x' }, ['kD.x =']),
                 el('input', {
                     'type': 'text',
-                    'value': state.kD,
-                    'id': 'inp-kD'
-                }, [])]),
+                    'value': state.kD.x,
+                    'id': 'inp-kD-x'
+                }, []),
+                el('label', { 'for': 'inp-kD-y' }, ['kD.y =']),
+                el('input', {
+                    'type': 'text',
+                    'value': state.kD.y,
+                    'id': 'inp-kD-y'
+                }, [])
+            ]),
             el('span', {}, [
                 el('label', { 'for': 'inp-force' }, ['F =']),
                 el('input', {
@@ -288,6 +405,34 @@ function render(state) {
             //el('button', { 'class': 'push-btn', 'id': 'right-btn' }, ['Right'])
         ]);
 
+    const log_bar = state.show_log
+        ? el('span', {}, [
+            el('p', {}, [state.ball.pos.toString()]),
+            el('p', {}, [state.ball.vel.toString()]),
+            el('p', {}, [state.ball.acc.toString()])])
+        : el('span', {}, []);
+
+    const show_log_ctrl_attrs = {
+        'type': 'checkbox',
+        'id': 'show-log-ctrl'
+    };
+
+    if (state.show_log) {
+        show_log_ctrl_attrs['checked'] = 'checked';
+    }
+    const show_log_ctrl = el('input', show_log_ctrl_attrs, []);
+
+    const auto_correct_attrs = {
+        'type': 'checkbox',
+        'id': 'auto-correct-ctrl'
+    };
+
+    if (state.autoCorrect) {
+        auto_correct_attrs['checked'] = 'checked';
+    }
+
+    const auto_correct_ctrl = el('input', auto_correct_attrs, []);
+
     return el('div', { 'id': 'main' }, [
         el('canvas', {
             'id': 'the_canvas',
@@ -295,11 +440,11 @@ function render(state) {
             'width': state.canvasWidth
         }, [])
             .subscribe(canvasMailbox),
+        auto_correct_ctrl,
         push_bar,
         ctrl_bar,
-        el('p', {}, [state.pos.toString()]),
-        el('p', {}, [state.vel.toString()]),
-        el('p', {}, [state.acc.toString()])
+        show_log_ctrl,
+        log_bar,
     ]);
 }
 

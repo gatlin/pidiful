@@ -48,6 +48,12 @@ export class Vector {
         return this;
     }
 
+    public subtractScalar(scalar) {
+        this.x -= scalar;
+        this.y -= scalar;
+        return this;
+    }
+
     public multiplyScalar(scalar) {
         this.x *= scalar;
         this.y *= scalar;
@@ -57,6 +63,12 @@ export class Vector {
     public divideScalar(scalar) {
         this.x /= scalar;
         this.y /= scalar;
+        return this;
+    }
+
+    public floor() {
+        this.x = Math.floor(this.x);
+        this.y = Math.floor(this.y);
         return this;
     }
 
