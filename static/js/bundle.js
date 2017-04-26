@@ -81,9 +81,9 @@
 	            canvasHeight: 300,
 	            i: new vector_1.Vector(),
 	            d: new vector_1.Vector(),
-	            kP: new vector_1.Vector(0.6, 0.8),
-	            kI: new vector_1.Vector(0.1, 0.6),
-	            kD: new vector_1.Vector(0.15, 0.05),
+	            kP: new vector_1.Vector(),
+	            kI: new vector_1.Vector(),
+	            kD: new vector_1.Vector(),
 	            lastFrameTime: Date.now(),
 	            lastPushTime: 0,
 	            push_force: 500,
@@ -124,7 +124,7 @@
 	                    .multiply(model.kP)
 	                    .add(model.kI.clone().multiply(model.i))
 	                    .add(model.kD.clone().multiply(model.d))
-	                    .divideScalar(1000);
+	                    .divideScalar(100);
 	            }
 	            model.ball = model.ball
 	                .update(dt, gravity)
