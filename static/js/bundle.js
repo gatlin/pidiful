@@ -117,7 +117,7 @@
 	                var ball = model.ball;
 	                var err_t = model.desired.clone()
 	                    .subtract(ball.pos);
-	                var dt_p = dt * 1000;
+	                var dt_p = dt * 100;
 	                model.i.x += err_t.x * dt_p;
 	                model.i.y += err_t.y * dt_p;
 	                model.d.x = (err_t.x - model.d.x + 0.01) / (dt_p + 0.001);

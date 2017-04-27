@@ -58,9 +58,9 @@ function new_appstate(): AppState {
         canvasHeight: 300,
         i: new Vector(0.0, 0.0),
         d: new Vector(0.0, 0.0),
-        kP: new Vector(0.0, 0.0),
-        kI: new Vector(0.0, 0.0),
-        kD: new Vector(0.0, 0.0),
+        kP: new Vector(0.6, 0.0),
+        kI: new Vector(0.01, 0.0),
+        kD: new Vector(2.5, 0.0),
         lastFrameTime: Date.now(),
         lastPushTime: 0,
         push_force: 500,
@@ -102,7 +102,7 @@ function update_model(action: Action, model: AppState): AppState {
                 .subtract(ball.pos)
                 ;
 
-            const dt_p = dt * 1000;
+            const dt_p = dt * 100;
 
             model.i.x += err_t.x * dt_p;
             model.i.y += err_t.y * dt_p;
