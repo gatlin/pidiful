@@ -59,7 +59,7 @@ function new_appstate(): AppState {
         i: new Vector(),
         d: new Vector(),
         kP: new Vector(50, 1000),
-        kI: new Vector(0, 0.001),
+        kI: new Vector(0, 0.005),
         kD: new Vector(0.15, 0),
         lastFrameTime: Date.now(),
         lastPushTime: 0,
