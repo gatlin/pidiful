@@ -58,7 +58,7 @@ function new_appstate(): AppState {
         canvasHeight: 300,
         i: new Vector(),
         d: new Vector(),
-        kP: new Vector(50, 900),
+        kP: new Vector(50, 1000),
         kI: new Vector(0, 0.001),
         kD: new Vector(0.15, 0),
         lastFrameTime: Date.now(),
