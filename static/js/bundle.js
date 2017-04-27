@@ -70,25 +70,19 @@
 	        Actions[Actions["UpdateForce"] = 9] = "UpdateForce";
 	        Actions[Actions["ToggleShowLog"] = 10] = "ToggleShowLog";
 	        Actions[Actions["ToggleAutoCorrect"] = 11] = "ToggleAutoCorrect";
+	        Actions[Actions["SetPoint"] = 12] = "SetPoint";
 	    })(Actions || (Actions = {}));
 	    ;
 	    function new_appstate() {
 	        return {
 	            canvasCtx: null,
-	            ball: new ball_1.Ball(20, 1.2, new vector_1.Vector(0, 300 - 20)),
-	            desired: new vector_1.Vector(0, 150),
+	            ball: new ball_1.Ball(20, 1.2, new vector_1.Vector(0, 0), new vector_1.Vector(0, 150)),
 	            canvasWidth: 800,
 	            canvasHeight: 300,
-	            i: new vector_1.Vector(0.0, 0.0),
-	            d: new vector_1.Vector(0.0, 0.0),
-	            kP: new vector_1.Vector(0.6, 0.0),
-	            kI: new vector_1.Vector(0.01, 0.0),
-	            kD: new vector_1.Vector(2.5, 0.0),
 	            lastFrameTime: Date.now(),
 	            lastPushTime: 0,
-	            push_force: 500,
-	            show_log: false,
-	            autoCorrect: false
+	            push_force: 250,
+	            show_log: false
 	        };
 	    }
 	    function draw(model) {
@@ -113,40 +107,10 @@
 	            var bound_right = model.canvasWidth / 2;
 	            var gravity = new vector_1.Vector(0, -1000);
 	            /* now for the PID calculations */
-	            if (model.autoCorrect) {
-	                var ball = model.ball;
-	                var err_t = model.desired.clone()
-	                    .subtract(ball.pos);
-	                var dt_p = dt * 100;
-	                model.i.x += err_t.x * dt_p;
-	                model.i.y += err_t.y * dt_p;
-	                model.d.x = (err_t.x - model.d.x + 0.01) / (dt_p + 0.001);
-	                model.d.y = (err_t.y - model.d.y + 0.01) / (dt_p + 0.001);
-	                var correction = new vector_1.Vector(err_t.x * model.kP.x +
-	                    model.i.x * model.kI.x +
-	                    model.d.x * model.kD.x, err_t.y * model.kP.y +
-	                    model.i.y * model.kI.y +
-	                    model.d.y * model.kD.y)
-	                    .divideScalar(100);
-	                if (isNaN(correction.x) || isNaN(correction.y)) {
-	                    console.log('correction has a NaN again!');
-	                    console.log('correction', correction.toString());
-	                    console.log('err_t', err_t.toString());
-	                    console.log('kP', model.kP.toString());
-	                    console.log('kI', model.kI.toString());
-	                    console.log('kD', model.kD.toString());
-	                    console.log('model.i', model.i.toString());
-	                    console.log('model.d', model.d.toString());
-	                    console.log('dt', dt);
-	                    console.log('ball.acc', ball.acc.toString());
-	                    console.log('gravity', gravity.toString());
-	                }
-	                gravity.add(correction).floor();
-	            }
 	            model.ball = model.ball
 	                .update(dt, gravity)
 	                .bounds_check(model.canvasHeight, bound_right, 0, bound_left);
-	            if (!model.autoCorrect && currentTime - model.lastPushTime > 500) {
+	            if (currentTime - model.lastPushTime > 500) {
 	                model.ball.acc.multiplyScalar(0.75);
 	            }
 	            model.lastFrameTime = currentTime;
@@ -159,9 +123,6 @@
 	            return model;
 	        };
 	        dispatch[Actions.Push] = function () {
-	            if (model.autoCorrect) {
-	                return model;
-	            }
 	            switch (action.data) {
 	                case Direction.Left:
 	                    model.ball.acc.add(new vector_1.Vector(-1 * model.push_force, 0));
@@ -179,27 +140,27 @@
 	            return model;
 	        };
 	        dispatch[Actions.UpdateKPx] = function () {
-	            model.kP.x = action.data;
+	            model.ball.kP.x = action.data;
 	            return model;
 	        };
 	        dispatch[Actions.UpdateKIx] = function () {
-	            model.kI.x = action.data;
+	            model.ball.kI.x = action.data;
 	            return model;
 	        };
 	        dispatch[Actions.UpdateKDx] = function () {
-	            model.kD.x = action.data;
+	            model.ball.kD.x = action.data;
 	            return model;
 	        };
 	        dispatch[Actions.UpdateKPy] = function () {
-	            model.kP.y = action.data;
+	            model.ball.kP.y = action.data;
 	            return model;
 	        };
 	        dispatch[Actions.UpdateKIy] = function () {
-	            model.kI.y = action.data;
+	            model.ball.kI.y = action.data;
 	            return model;
 	        };
 	        dispatch[Actions.UpdateKDy] = function () {
-	            model.kD.y = action.data;
+	            model.ball.kD.y = action.data;
 	            return model;
 	        };
 	        dispatch[Actions.UpdateForce] = function () {
@@ -211,11 +172,25 @@
 	            return model;
 	        };
 	        dispatch[Actions.ToggleAutoCorrect] = function () {
-	            model.autoCorrect = !model.autoCorrect;
-	            if (model.autoCorrect) {
-	                model.i = new vector_1.Vector();
-	                model.d = new vector_1.Vector();
+	            model.ball.assist = !model.ball.assist;
+	            if (model.ball.assist) {
+	                model.ball.i = new vector_1.Vector();
+	                model.ball.d = new vector_1.Vector();
 	            }
+	            return model;
+	        };
+	        dispatch[Actions.SetPoint] = function () {
+	            var evt = action.data;
+	            var rect = evt
+	                .target
+	                .getBoundingClientRect();
+	            var xCoord = evt.clientX - rect.left;
+	            var yCoord = evt.clientY - rect.top;
+	            model.ball.desired = new vector_1.Vector(xCoord - (model.canvasWidth / 2), model.canvasHeight - yCoord);
+	            /*
+	                    model.ball.i = new Vector();
+	                    model.ball.d = new Vector();
+	            */
 	            return model;
 	        };
 	        return dispatch[action.type]();
@@ -329,6 +304,19 @@
 	            type: Actions.ToggleAutoCorrect
 	        }); })
 	            .connect(scope.actions);
+	        scope.events.keydown
+	            .filter(function (evt) { return evt.getRaw().keyCode === 32; })
+	            .map(function (evt) { return ({
+	            type: Actions.ToggleAutoCorrect
+	        }); })
+	            .connect(scope.actions);
+	        scope.events.click
+	            .filter(function (evt) { return evt.getId() === 'the_canvas'; })
+	            .map(function (evt) { return ({
+	            type: Actions.SetPoint,
+	            data: evt.getRaw()
+	        }); })
+	            .connect(scope.actions);
 	        canvasMailbox
 	            .filter(function (cnvs) { return cnvs !== null; })
 	            .map(function (cnvs) { return ({
@@ -346,13 +334,13 @@
 	                alm_1.el('label', { 'for': 'inp-kP-x' }, ['kP.x =']),
 	                alm_1.el('input', {
 	                    'type': 'text',
-	                    'value': state.kP.x,
+	                    'value': state.ball.kP.x,
 	                    'id': 'inp-kP-x'
 	                }, []),
 	                alm_1.el('label', { 'for': 'inp-kP-y' }, ['kP.y =']),
 	                alm_1.el('input', {
 	                    'type': 'text',
-	                    'value': state.kP.y,
+	                    'value': state.ball.kP.y,
 	                    'id': 'inp-kP-y'
 	                }, [])
 	            ]),
@@ -360,13 +348,13 @@
 	                alm_1.el('label', { 'for': 'inp-kI-x' }, ['kI.x =']),
 	                alm_1.el('input', {
 	                    'type': 'text',
-	                    'value': state.kI.x,
+	                    'value': state.ball.kI.x,
 	                    'id': 'inp-kI-x'
 	                }, []),
 	                alm_1.el('label', { 'for': 'inp-kI-y' }, ['kI.y =']),
 	                alm_1.el('input', {
 	                    'type': 'text',
-	                    'value': state.kI.y,
+	                    'value': state.ball.kI.y,
 	                    'id': 'inp-kI-y'
 	                }, [])
 	            ]),
@@ -374,13 +362,13 @@
 	                alm_1.el('label', { 'for': 'inp-kD-x' }, ['kD.x =']),
 	                alm_1.el('input', {
 	                    'type': 'text',
-	                    'value': state.kD.x,
+	                    'value': state.ball.kD.x,
 	                    'id': 'inp-kD-x'
 	                }, []),
 	                alm_1.el('label', { 'for': 'inp-kD-y' }, ['kD.y =']),
 	                alm_1.el('input', {
 	                    'type': 'text',
-	                    'value': state.kD.y,
+	                    'value': state.ball.kD.y,
 	                    'id': 'inp-kD-y'
 	                }, [])
 	            ]),
@@ -414,9 +402,10 @@
 	        var show_log_ctrl = alm_1.el('input', show_log_ctrl_attrs, []);
 	        var auto_correct_attrs = {
 	            'type': 'checkbox',
-	            'id': 'auto-correct-ctrl'
+	            'id': 'auto-correct-ctrl',
+	            'key': 'auto-correct-' + Date.now().toString()
 	        };
-	        if (state.autoCorrect) {
+	        if (state.ball.assist) {
 	            auto_correct_attrs['checked'] = 'checked';
 	        }
 	        var auto_correct_ctrl = alm_1.el('input', auto_correct_attrs, []);
@@ -1258,16 +1247,48 @@
 	    "use strict";
 	    exports.__esModule = true;
 	    var Ball = (function () {
-	        function Ball(radius, mass, pos, vel, acc) {
+	        function Ball(radius, mass, pos, desired, vel, acc, assist, i, d, kP, kI, kD) {
+	            if (desired === void 0) { desired = new vector_1.Vector(0, 0); }
 	            if (vel === void 0) { vel = new vector_1.Vector(0, 0); }
 	            if (acc === void 0) { acc = new vector_1.Vector(0, 0); }
+	            if (assist === void 0) { assist = true; }
+	            if (i === void 0) { i = new vector_1.Vector(); }
+	            if (d === void 0) { d = new vector_1.Vector(); }
+	            if (kP === void 0) { kP = new vector_1.Vector(0.2, 0.8); }
+	            if (kI === void 0) { kI = new vector_1.Vector(0.01, 0.1); }
+	            if (kD === void 0) { kD = new vector_1.Vector(0.5, 1.5); }
 	            this.radius = radius;
 	            this.mass = mass;
 	            this.pos = pos;
 	            this.vel = vel;
 	            this.acc = acc;
+	            this.desired = desired;
+	            this.assist = assist;
+	            this.i = i;
+	            this.d = d;
+	            this.kP = kP;
+	            this.kI = kI;
+	            this.kD = kD;
 	        }
 	        Ball.prototype.update = function (dt, otherForces) {
+	            if (this.assist) {
+	                var err_t = this.desired.clone()
+	                    .subtract(this.pos)
+	                    .multiplyScalar(1000);
+	                var dt_p = dt * 100;
+	                this.i.x += (err_t.x * dt_p) / 100;
+	                this.i.y += (err_t.y * dt_p) / 100;
+	                this.d.x = ((err_t.x - this.d.x) / (dt_p + 0.001)) / 100;
+	                this.d.y = ((err_t.y - this.d.y) / (dt_p + 0.001)) / 100;
+	                var correction = new vector_1.Vector(err_t.x * this.kP.x +
+	                    this.i.x * this.kI.x +
+	                    this.d.x * this.kD.x, err_t.y * this.kP.y +
+	                    this.i.y * this.kI.y +
+	                    this.d.y * this.kD.y)
+	                    .divideScalar(100);
+	                this.acc = correction;
+	                //            otherForces.add(correction);
+	            }
 	            this.pos.add(this.vel.clone()
 	                .multiplyScalar(dt)
 	                .add(this.acc.clone()
@@ -1288,7 +1309,7 @@
 	                .add(this.acc.clone())
 	                .divideScalar(2);
 	            this.vel.add(avg_acc.multiplyScalar(dt));
-	            if (Math.abs(this.acc.x) < 0.0001) {
+	            if (Math.abs(this.acc.x) <= 0.001) {
 	                this.acc.floor();
 	            }
 	            if (Math.abs(this.vel.x) < 0.001 ||
@@ -1321,6 +1342,10 @@
 	            ctx.lineWidth = 7;
 	            ctx.strokeStyle = '#325FA2';
 	            ctx.arc((cW / 2) + this.pos.x, (cH - this.pos.y), this.radius - 7, 0, Math.PI * 2, true);
+	            ctx.stroke();
+	            ctx.beginPath();
+	            ctx.strokeStyle = '#000000';
+	            ctx.arc((cW / 2) + this.desired.x, (cH - this.desired.y), 5, 0, Math.PI * 2, true);
 	            ctx.stroke();
 	        };
 	        return Ball;

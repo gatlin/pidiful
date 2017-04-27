@@ -23,25 +23,19 @@ enum Actions {
     UpdateKDy,
     UpdateForce,
     ToggleShowLog,
-    ToggleAutoCorrect
+    ToggleAutoCorrect,
+    SetPoint
 };
 
 type AppState = {
     canvasCtx: any;
     ball: Ball;
-    desired: Vector;
     canvasWidth: number;
     canvasHeight: number;
-    i: Vector;
-    d: Vector;
-    kP: Vector;
-    kI: Vector;
-    kD: Vector;
     lastFrameTime: number;
     lastPushTime: number;
     push_force: number;
     show_log: boolean;
-    autoCorrect: boolean;
 };
 
 type Action = {
@@ -52,20 +46,13 @@ type Action = {
 function new_appstate(): AppState {
     return {
         canvasCtx: null,
-        ball: new Ball(20, 1.2, new Vector(0, 300 - 20)),
-        desired: new Vector(0, 150),
+        ball: new Ball(20, 1.2, new Vector(0, 0), new Vector(0, 150)),
         canvasWidth: 800,
         canvasHeight: 300,
-        i: new Vector(0.0, 0.0),
-        d: new Vector(0.0, 0.0),
-        kP: new Vector(0.6, 0.0),
-        kI: new Vector(0.01, 0.0),
-        kD: new Vector(2.5, 0.0),
         lastFrameTime: Date.now(),
         lastPushTime: 0,
-        push_force: 500,
-        show_log: false,
-        autoCorrect: false
+        push_force: 250,
+        show_log: false
     };
 }
 
@@ -96,52 +83,12 @@ function update_model(action: Action, model: AppState): AppState {
         const gravity = new Vector(0, -1000);
 
         /* now for the PID calculations */
-        if (model.autoCorrect) {
-            const ball = model.ball;
-            const err_t = model.desired.clone()
-                .subtract(ball.pos)
-                ;
-
-            const dt_p = dt * 100;
-
-            model.i.x += err_t.x * dt_p;
-            model.i.y += err_t.y * dt_p;
-
-            model.d.x = (err_t.x - model.d.x + 0.01) / (dt_p + 0.001);
-            model.d.y = (err_t.y - model.d.y + 0.01) / (dt_p + 0.001);
-
-            const correction = new Vector(
-                err_t.x * model.kP.x +
-                model.i.x * model.kI.x +
-                model.d.x * model.kD.x,
-                err_t.y * model.kP.y +
-                model.i.y * model.kI.y +
-                model.d.y * model.kD.y
-            )
-                .divideScalar(100);
-
-            if (isNaN(correction.x) || isNaN(correction.y)) {
-                console.log('correction has a NaN again!');
-                console.log('correction', correction.toString());
-                console.log('err_t', err_t.toString());
-                console.log('kP', model.kP.toString());
-                console.log('kI', model.kI.toString());
-                console.log('kD', model.kD.toString());
-                console.log('model.i', model.i.toString());
-                console.log('model.d', model.d.toString());
-                console.log('dt', dt);
-                console.log('ball.acc', ball.acc.toString());
-                console.log('gravity', gravity.toString());
-            }
-            gravity.add(correction).floor();
-
-        }
 
         model.ball = model.ball
             .update(dt, gravity)
             .bounds_check(model.canvasHeight, bound_right, 0, bound_left);
 
-        if (!model.autoCorrect && currentTime - model.lastPushTime > 500) {
+        if (currentTime - model.lastPushTime > 500) {
             model.ball.acc.multiplyScalar(0.75);
         }
 
@@ -157,9 +104,6 @@ function update_model(action: Action, model: AppState): AppState {
     };
 
     dispatch[Actions.Push] = () => {
-        if (model.autoCorrect) {
-            return model;
-        }
         switch (action.data) {
             case Direction.Left:
                 model.ball.acc.add(new Vector(-1 * model.push_force, 0));
@@ -180,32 +124,32 @@ function update_model(action: Action, model: AppState): AppState {
     };
 
     dispatch[Actions.UpdateKPx] = () => {
-        model.kP.x = action.data;
+        model.ball.kP.x = action.data;
         return model;
     };
 
     dispatch[Actions.UpdateKIx] = () => {
-        model.kI.x = action.data;
+        model.ball.kI.x = action.data;
         return model;
     };
 
     dispatch[Actions.UpdateKDx] = () => {
-        model.kD.x = action.data;
+        model.ball.kD.x = action.data;
         return model;
     };
 
     dispatch[Actions.UpdateKPy] = () => {
-        model.kP.y = action.data;
+        model.ball.kP.y = action.data;
         return model;
     };
 
     dispatch[Actions.UpdateKIy] = () => {
-        model.kI.y = action.data;
+        model.ball.kI.y = action.data;
         return model;
     };
 
     dispatch[Actions.UpdateKDy] = () => {
-        model.kD.y = action.data;
+        model.ball.kD.y = action.data;
         return model;
     };
 
@@ -220,14 +164,33 @@ function update_model(action: Action, model: AppState): AppState {
     }
 
     dispatch[Actions.ToggleAutoCorrect] = () => {
-        model.autoCorrect = !model.autoCorrect;
-        if (model.autoCorrect) {
-            model.i = new Vector();
-            model.d = new Vector();
+        model.ball.assist = !model.ball.assist;
+        if (model.ball.assist) {
+            model.ball.i = new Vector();
+            model.ball.d = new Vector();
         }
         return model;
     }
 
+    dispatch[Actions.SetPoint] = () => {
+        const evt = action.data;
+        const rect = evt
+            .target
+            .getBoundingClientRect();
+
+        const xCoord = evt.clientX - rect.left;
+        const yCoord = evt.clientY - rect.top;
+
+        model.ball.desired = new Vector(
+            xCoord - (model.canvasWidth / 2),
+            model.canvasHeight - yCoord
+        );
+        /*
+                model.ball.i = new Vector();
+                model.ball.d = new Vector();
+        */
+        return model;
+    };
     return dispatch[action.type]();
 }
 
@@ -354,6 +317,21 @@ function main(scope) {
         }))
         .connect(scope.actions);
 
+    scope.events.keydown
+        .filter(evt => evt.getRaw().keyCode === 32)
+        .map(evt => ({
+            type: Actions.ToggleAutoCorrect
+        }))
+        .connect(scope.actions);
+
+    scope.events.click
+        .filter(evt => evt.getId() === 'the_canvas')
+        .map(evt => ({
+            type: Actions.SetPoint,
+            data: evt.getRaw()
+        }))
+        .connect(scope.actions);
+
     canvasMailbox
         .filter(cnvs => cnvs !== null)
         .map(cnvs => ({
@@ -373,13 +351,13 @@ function render(state) {
                 el('label', { 'for': 'inp-kP-x' }, ['kP.x =']),
                 el('input', {
                     'type': 'text',
-                    'value': state.kP.x,
+                    'value': state.ball.kP.x,
                     'id': 'inp-kP-x'
                 }, []),
                 el('label', { 'for': 'inp-kP-y' }, ['kP.y =']),
                 el('input', {
                     'type': 'text',
-                    'value': state.kP.y,
+                    'value': state.ball.kP.y,
                     'id': 'inp-kP-y'
                 }, [])
             ]),
@@ -387,13 +365,13 @@ function render(state) {
                 el('label', { 'for': 'inp-kI-x' }, ['kI.x =']),
                 el('input', {
                     'type': 'text',
-                    'value': state.kI.x,
+                    'value': state.ball.kI.x,
                     'id': 'inp-kI-x'
                 }, []),
                 el('label', { 'for': 'inp-kI-y' }, ['kI.y =']),
                 el('input', {
                     'type': 'text',
-                    'value': state.kI.y,
+                    'value': state.ball.kI.y,
                     'id': 'inp-kI-y'
                 }, [])
             ]),
@@ -401,13 +379,13 @@ function render(state) {
                 el('label', { 'for': 'inp-kD-x' }, ['kD.x =']),
                 el('input', {
                     'type': 'text',
-                    'value': state.kD.x,
+                    'value': state.ball.kD.x,
                     'id': 'inp-kD-x'
                 }, []),
                 el('label', { 'for': 'inp-kD-y' }, ['kD.y =']),
                 el('input', {
                     'type': 'text',
-                    'value': state.kD.y,
+                    'value': state.ball.kD.y,
                     'id': 'inp-kD-y'
                 }, [])
             ]),
@@ -449,10 +427,11 @@ function render(state) {
 
     const auto_correct_attrs = {
         'type': 'checkbox',
-        'id': 'auto-correct-ctrl'
+        'id': 'auto-correct-ctrl',
+        'key': 'auto-correct-' + Date.now().toString()
     };
 
-    if (state.autoCorrect) {
+    if (state.ball.assist) {
         auto_correct_attrs['checked'] = 'checked';
     }
 
