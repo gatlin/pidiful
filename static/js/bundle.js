@@ -79,11 +79,11 @@
 	            desired: new vector_1.Vector(0, 150),
 	            canvasWidth: 800,
 	            canvasHeight: 300,
-	            i: new vector_1.Vector(),
-	            d: new vector_1.Vector(),
-	            kP: new vector_1.Vector(50, 1000),
-	            kI: new vector_1.Vector(0.001, 0.005),
-	            kD: new vector_1.Vector(0.15, 0),
+	            i: new vector_1.Vector(0.0, 0.0),
+	            d: new vector_1.Vector(0.0, 0.0),
+	            kP: new vector_1.Vector(0.0, 0.0),
+	            kI: new vector_1.Vector(0.0, 0.0),
+	            kD: new vector_1.Vector(0.0, 0.0),
 	            lastFrameTime: Date.now(),
 	            lastPushTime: 0,
 	            push_force: 500,
@@ -108,8 +108,7 @@
 	                return model;
 	            }
 	            var currentTime = Date.now();
-	            var dt_orig = (currentTime - model.lastFrameTime);
-	            var dt = dt_orig / 1000;
+	            var dt = (currentTime - model.lastFrameTime) / 1000;
 	            var bound_left = -1 * (model.canvasWidth / 2);
 	            var bound_right = model.canvasWidth / 2;
 	            var gravity = new vector_1.Vector(0, -1000);
@@ -118,13 +117,31 @@
 	                var ball = model.ball;
 	                var err_t = model.desired.clone()
 	                    .subtract(ball.pos);
-	                model.i.add(err_t.clone().multiplyScalar(dt_orig));
-	                model.d = err_t.clone().subtract(model.d).divideScalar(dt_orig);
-	                ball.acc = err_t
-	                    .multiply(model.kP)
-	                    .add(model.kI.clone().multiply(model.i))
-	                    .add(model.kD.clone().multiply(model.d))
+	                var dt_p = dt * 1000;
+	                model.i.x += err_t.x * dt_p;
+	                model.i.y += err_t.y * dt_p;
+	                model.d.x = (err_t.x - model.d.x + 0.01) / (dt_p + 0.001);
+	                model.d.y = (err_t.y - model.d.y + 0.01) / (dt_p + 0.001);
+	                var correction = new vector_1.Vector(err_t.x * model.kP.x +
+	                    model.i.x * model.kI.x +
+	                    model.d.x * model.kD.x, err_t.y * model.kP.y +
+	                    model.i.y * model.kI.y +
+	                    model.d.y * model.kD.y)
 	                    .divideScalar(100);
+	                if (isNaN(correction.x) || isNaN(correction.y)) {
+	                    console.log('correction has a NaN again!');
+	                    console.log('correction', correction.toString());
+	                    console.log('err_t', err_t.toString());
+	                    console.log('kP', model.kP.toString());
+	                    console.log('kI', model.kI.toString());
+	                    console.log('kD', model.kD.toString());
+	                    console.log('model.i', model.i.toString());
+	                    console.log('model.d', model.d.toString());
+	                    console.log('dt', dt);
+	                    console.log('ball.acc', ball.acc.toString());
+	                    console.log('gravity', gravity.toString());
+	                }
+	                gravity.add(correction).floor();
 	            }
 	            model.ball = model.ball
 	                .update(dt, gravity)
