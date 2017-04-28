@@ -1255,8 +1255,8 @@
 	            if (i === void 0) { i = new vector_1.Vector(); }
 	            if (d === void 0) { d = new vector_1.Vector(); }
 	            if (kP === void 0) { kP = new vector_1.Vector(0.2, 0.8); }
-	            if (kI === void 0) { kI = new vector_1.Vector(0.01, 0.1); }
-	            if (kD === void 0) { kD = new vector_1.Vector(0.5, 1.5); }
+	            if (kI === void 0) { kI = new vector_1.Vector(0.01, 0.05); }
+	            if (kD === void 0) { kD = new vector_1.Vector(0.5, 1.0); }
 	            this.radius = radius;
 	            this.mass = mass;
 	            this.pos = pos;
