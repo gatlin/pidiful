@@ -21,7 +21,7 @@ export class Ball {
         acc = new Vector(0, 0),
         run = false,
         kP = new Vector(0.8, 0.85),
-        kI = new Vector(0.05, 0.1),
+        kI = new Vector(0.05, 0.15),
         kD = new Vector(0.01, 0.05)) {
         this.radius = radius;
         this.mass = mass;

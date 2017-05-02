@@ -1129,7 +1129,7 @@
 	            if (acc === void 0) { acc = new vector_1.Vector(0, 0); }
 	            if (run === void 0) { run = false; }
 	            if (kP === void 0) { kP = new vector_1.Vector(0.8, 0.85); }
-	            if (kI === void 0) { kI = new vector_1.Vector(0.05, 0.1); }
+	            if (kI === void 0) { kI = new vector_1.Vector(0.05, 0.15); }
 	            if (kD === void 0) { kD = new vector_1.Vector(0.01, 0.05); }
 	            this.radius = radius;
 	            this.mass = mass;
