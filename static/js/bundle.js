@@ -53,7 +53,8 @@
 	        Direction[Direction["Left"] = 0] = "Left";
 	        Direction[Direction["Right"] = 1] = "Right";
 	        Direction[Direction["Up"] = 2] = "Up";
-	        Direction[Direction["None"] = 3] = "None";
+	        Direction[Direction["Down"] = 3] = "Down";
+	        Direction[Direction["None"] = 4] = "None";
 	    })(Direction || (Direction = {}));
 	    ;
 	    var Actions;
@@ -61,28 +62,43 @@
 	        Actions[Actions["Tick"] = 0] = "Tick";
 	        Actions[Actions["CanvasUpdate"] = 1] = "CanvasUpdate";
 	        Actions[Actions["Push"] = 2] = "Push";
-	        Actions[Actions["UpdateKPx"] = 3] = "UpdateKPx";
-	        Actions[Actions["UpdateKIx"] = 4] = "UpdateKIx";
-	        Actions[Actions["UpdateKDx"] = 5] = "UpdateKDx";
-	        Actions[Actions["UpdateKPy"] = 6] = "UpdateKPy";
-	        Actions[Actions["UpdateKIy"] = 7] = "UpdateKIy";
-	        Actions[Actions["UpdateKDy"] = 8] = "UpdateKDy";
-	        Actions[Actions["UpdateForce"] = 9] = "UpdateForce";
-	        Actions[Actions["ToggleShowLog"] = 10] = "ToggleShowLog";
-	        Actions[Actions["ToggleAutoCorrect"] = 11] = "ToggleAutoCorrect";
-	        Actions[Actions["SetPoint"] = 12] = "SetPoint";
+	        Actions[Actions["ToggleShowLog"] = 3] = "ToggleShowLog";
+	        Actions[Actions["ToggleAutoCorrect"] = 4] = "ToggleAutoCorrect";
+	        Actions[Actions["SetPoint"] = 5] = "SetPoint";
 	    })(Actions || (Actions = {}));
 	    ;
-	    function new_appstate() {
+	    function window_geometry() {
+	        var winSize = Math.min(window.innerWidth, window.innerHeight - 50);
+	        var viewHeight;
+	        if (winSize >= 480) {
+	            viewHeight = 0.75 * winSize;
+	        }
+	        else {
+	            viewHeight = 0.95 * winSize;
+	        }
+	        if (viewHeight < 480) {
+	            viewHeight = window.innerWidth;
+	        }
+	        var pixelRatio = window.devicePixelRatio || 1;
 	        return {
+	            viewHeight: viewHeight,
+	            viewWidth: window.innerWidth,
+	            pixelRation: pixelRatio
+	        };
+	    }
+	    function new_appstate() {
+	        var geom = window_geometry();
+	        return {
+	            geometry: geom,
 	            canvasCtx: null,
-	            ball: new ball_1.Ball(20, 1.2, new vector_1.Vector(0, 0), new vector_1.Vector(0, 150)),
-	            canvasWidth: 800,
-	            canvasHeight: 300,
+	            ball: new ball_1.Ball(20, 1.0, new vector_1.Vector(0, geom.viewHeight - 20), new vector_1.Vector(0, geom.viewHeight / 2)),
+	            canvasWidth: geom.viewWidth * 0.9,
+	            canvasHeight: geom.viewHeight,
 	            lastFrameTime: Date.now(),
 	            lastPushTime: 0,
-	            push_force: 250,
-	            show_log: false
+	            push_force: 500,
+	            show_log: true,
+	            refresh_rate: 1000.0 / 60.0
 	        };
 	    }
 	    function draw(model) {
@@ -105,9 +121,8 @@
 	            var dt = (currentTime - model.lastFrameTime) / 1000;
 	            var bound_left = -1 * (model.canvasWidth / 2);
 	            var bound_right = model.canvasWidth / 2;
-	            var gravity = new vector_1.Vector(0, -1000);
-	            /* now for the PID calculations */
-	            model.ball = model.ball
+	            var gravity = new vector_1.Vector(0, -980);
+	            model.ball
 	                .update(dt, gravity)
 	                .bounds_check(model.canvasHeight, bound_right, 0, bound_left);
 	            if (currentTime - model.lastPushTime > 500) {
@@ -125,46 +140,21 @@
 	        dispatch[Actions.Push] = function () {
 	            switch (action.data) {
 	                case Direction.Left:
-	                    model.ball.acc.add(new vector_1.Vector(-1 * model.push_force, 0));
+	                    model.ball.acc.x -= model.push_force;
 	                    break;
 	                case Direction.Right:
-	                    model.ball.acc.add(new vector_1.Vector(model.push_force, 0));
+	                    model.ball.acc.x += model.push_force;
 	                    break;
 	                case Direction.Up:
-	                    model.ball.acc.add(new vector_1.Vector(0, model.push_force));
+	                    model.ball.acc.y += model.push_force;
 	                    break;
-	                case Direction.None:
+	                case Direction.Down:
+	                    model.ball.acc.y -= model.push_force;
+	                    break;
+	                default:
 	                    model.lastPushTime = Date.now();
 	                    break;
 	            }
-	            return model;
-	        };
-	        dispatch[Actions.UpdateKPx] = function () {
-	            model.ball.kP.x = action.data;
-	            return model;
-	        };
-	        dispatch[Actions.UpdateKIx] = function () {
-	            model.ball.kI.x = action.data;
-	            return model;
-	        };
-	        dispatch[Actions.UpdateKDx] = function () {
-	            model.ball.kD.x = action.data;
-	            return model;
-	        };
-	        dispatch[Actions.UpdateKPy] = function () {
-	            model.ball.kP.y = action.data;
-	            return model;
-	        };
-	        dispatch[Actions.UpdateKIy] = function () {
-	            model.ball.kI.y = action.data;
-	            return model;
-	        };
-	        dispatch[Actions.UpdateKDy] = function () {
-	            model.ball.kD.y = action.data;
-	            return model;
-	        };
-	        dispatch[Actions.UpdateForce] = function () {
-	            model.push_force = action.data;
 	            return model;
 	        };
 	        dispatch[Actions.ToggleShowLog] = function () {
@@ -223,73 +213,19 @@
 	            data: Direction.Up
 	        }); })
 	            .connect(scope.actions);
+	        // down arrow
+	        scope.events.keydown
+	            .filter(function (evt) { return evt.getRaw().keyCode === 40; })
+	            .map(function (evt) { return ({
+	            type: Actions.Push,
+	            data: Direction.Down
+	        }); })
+	            .connect(scope.actions);
+	        // all
 	        scope.events.keyup
 	            .map(function (evt) { return ({
 	            type: Actions.Push,
 	            data: Direction.None
-	        }); })
-	            .connect(scope.actions);
-	        scope.events.change
-	            .filter(function (evt) { return evt.getId() === 'inp-kP-x'; })
-	            .map(function (evt) { return parseFloat(evt.getValue()); })
-	            .filter(valid_number)
-	            .map(function (n) { return ({
-	            type: Actions.UpdateKPx,
-	            data: n
-	        }); })
-	            .connect(scope.actions);
-	        scope.events.change
-	            .filter(function (evt) { return evt.getId() === 'inp-kI-x'; })
-	            .map(function (evt) { return parseFloat(evt.getValue()); })
-	            .filter(valid_number)
-	            .map(function (n) { return ({
-	            type: Actions.UpdateKIx,
-	            data: n
-	        }); })
-	            .connect(scope.actions);
-	        scope.events.change
-	            .filter(function (evt) { return evt.getId() === 'inp-kD-x'; })
-	            .map(function (evt) { return parseFloat(evt.getValue()); })
-	            .filter(valid_number)
-	            .map(function (n) { return ({
-	            type: Actions.UpdateKDx,
-	            data: n
-	        }); })
-	            .connect(scope.actions);
-	        scope.events.change
-	            .filter(function (evt) { return evt.getId() === 'inp-kP-y'; })
-	            .map(function (evt) { return parseFloat(evt.getValue()); })
-	            .filter(valid_number)
-	            .map(function (n) { return ({
-	            type: Actions.UpdateKPy,
-	            data: n
-	        }); })
-	            .connect(scope.actions);
-	        scope.events.change
-	            .filter(function (evt) { return evt.getId() === 'inp-kI-y'; })
-	            .map(function (evt) { return parseFloat(evt.getValue()); })
-	            .filter(valid_number)
-	            .map(function (n) { return ({
-	            type: Actions.UpdateKIy,
-	            data: n
-	        }); })
-	            .connect(scope.actions);
-	        scope.events.change
-	            .filter(function (evt) { return evt.getId() === 'inp-kD-y'; })
-	            .map(function (evt) { return parseFloat(evt.getValue()); })
-	            .filter(valid_number)
-	            .map(function (n) { return ({
-	            type: Actions.UpdateKDy,
-	            data: n
-	        }); })
-	            .connect(scope.actions);
-	        scope.events.change
-	            .filter(function (evt) { return evt.getId() === 'inp-force'; })
-	            .map(function (evt) { return parseFloat(evt.getValue()); })
-	            .filter(valid_number)
-	            .map(function (n) { return ({
-	            type: Actions.UpdateForce,
-	            data: n
 	        }); })
 	            .connect(scope.actions);
 	        scope.events.change
@@ -326,61 +262,6 @@
 	            .connect(scope.actions);
 	    }
 	    function render(state) {
-	        var ctrl_bar = alm_1.el('div', {
-	            'class': 'horizontal-bar',
-	            'id': 'ctrl-bar'
-	        }, [
-	            alm_1.el('span', {}, [
-	                alm_1.el('label', { 'for': 'inp-kP-x' }, ['kP.x =']),
-	                alm_1.el('input', {
-	                    'type': 'text',
-	                    'value': state.ball.kP.x,
-	                    'id': 'inp-kP-x'
-	                }, []),
-	                alm_1.el('label', { 'for': 'inp-kP-y' }, ['kP.y =']),
-	                alm_1.el('input', {
-	                    'type': 'text',
-	                    'value': state.ball.kP.y,
-	                    'id': 'inp-kP-y'
-	                }, [])
-	            ]),
-	            alm_1.el('span', {}, [
-	                alm_1.el('label', { 'for': 'inp-kI-x' }, ['kI.x =']),
-	                alm_1.el('input', {
-	                    'type': 'text',
-	                    'value': state.ball.kI.x,
-	                    'id': 'inp-kI-x'
-	                }, []),
-	                alm_1.el('label', { 'for': 'inp-kI-y' }, ['kI.y =']),
-	                alm_1.el('input', {
-	                    'type': 'text',
-	                    'value': state.ball.kI.y,
-	                    'id': 'inp-kI-y'
-	                }, [])
-	            ]),
-	            alm_1.el('span', {}, [
-	                alm_1.el('label', { 'for': 'inp-kD-x' }, ['kD.x =']),
-	                alm_1.el('input', {
-	                    'type': 'text',
-	                    'value': state.ball.kD.x,
-	                    'id': 'inp-kD-x'
-	                }, []),
-	                alm_1.el('label', { 'for': 'inp-kD-y' }, ['kD.y =']),
-	                alm_1.el('input', {
-	                    'type': 'text',
-	                    'value': state.ball.kD.y,
-	                    'id': 'inp-kD-y'
-	                }, [])
-	            ]),
-	            alm_1.el('span', {}, [
-	                alm_1.el('label', { 'for': 'inp-force' }, ['F =']),
-	                alm_1.el('input', {
-	                    'type': 'text',
-	                    'value': state.push_force,
-	                    'id': 'inp-force'
-	                }, [])
-	            ])
-	        ]);
 	        var push_bar = alm_1.el('div', {
 	            'class': 'horizontal-bar',
 	            'id': 'push-bar'
@@ -418,7 +299,6 @@
 	                .subscribe(canvasMailbox),
 	            auto_correct_ctrl,
 	            push_bar,
-	            ctrl_bar,
 	            show_log_ctrl,
 	            log_bar,
 	        ]);
@@ -434,14 +314,11 @@
 	        main: main
 	    });
 	    var runtime = app.start();
-	    runtime.state.recv(function (st) {
-	        //console.log('state updated');
-	    });
-	    function tick() {
+	    function tick(ts) {
 	        runtime.ports.inbound.tick.send(null);
 	        window.requestAnimationFrame(tick);
 	    }
-	    tick();
+	    window.requestAnimationFrame(tick);
 	}.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 
@@ -1247,16 +1124,14 @@
 	    "use strict";
 	    exports.__esModule = true;
 	    var Ball = (function () {
-	        function Ball(radius, mass, pos, desired, vel, acc, assist, i, d, kP, kI, kD) {
+	        function Ball(radius, mass, pos, desired, vel, acc, assist, kP, kI, kD) {
 	            if (desired === void 0) { desired = new vector_1.Vector(0, 0); }
 	            if (vel === void 0) { vel = new vector_1.Vector(0, 0); }
 	            if (acc === void 0) { acc = new vector_1.Vector(0, 0); }
-	            if (assist === void 0) { assist = true; }
-	            if (i === void 0) { i = new vector_1.Vector(); }
-	            if (d === void 0) { d = new vector_1.Vector(); }
-	            if (kP === void 0) { kP = new vector_1.Vector(0.2, 0.8); }
-	            if (kI === void 0) { kI = new vector_1.Vector(0.01, 0.05); }
-	            if (kD === void 0) { kD = new vector_1.Vector(0.5, 1.0); }
+	            if (assist === void 0) { assist = false; }
+	            if (kP === void 0) { kP = new vector_1.Vector(0.8, 0.9); }
+	            if (kI === void 0) { kI = new vector_1.Vector(0.08, 0.5); }
+	            if (kD === void 0) { kD = new vector_1.Vector(0.3, 0.1); }
 	            this.radius = radius;
 	            this.mass = mass;
 	            this.pos = pos;
@@ -1264,30 +1139,22 @@
 	            this.acc = acc;
 	            this.desired = desired;
 	            this.assist = assist;
-	            this.i = i;
-	            this.d = d;
 	            this.kP = kP;
 	            this.kI = kI;
 	            this.kD = kD;
+	            this.C_d = 0.47;
+	            this.i = new vector_1.Vector();
+	            this.d = new vector_1.Vector();
 	        }
 	        Ball.prototype.update = function (dt, otherForces) {
 	            if (this.assist) {
-	                var err_t = this.desired.clone()
-	                    .subtract(this.pos)
-	                    .multiplyScalar(1000);
-	                var dt_p = dt * 100;
-	                this.i.x += (err_t.x * dt_p) / 100;
-	                this.i.y += (err_t.y * dt_p) / 100;
-	                this.d.x = ((err_t.x - this.d.x) / (dt_p + 0.001)) / 100;
-	                this.d.y = ((err_t.y - this.d.y) / (dt_p + 0.001)) / 100;
-	                var correction = new vector_1.Vector(err_t.x * this.kP.x +
-	                    this.i.x * this.kI.x +
-	                    this.d.x * this.kD.x, err_t.y * this.kP.y +
-	                    this.i.y * this.kI.y +
-	                    this.d.y * this.kD.y)
-	                    .divideScalar(100);
-	                this.acc = correction;
-	                //            otherForces.add(correction);
+	                var err_t = this.desired.clone().subtract(this.pos);
+	                this.i.add(err_t.clone().multiplyScalar(dt));
+	                var correction = err_t.multiply(this.kP)
+	                    .add(this.i.clone().multiply(this.kI))
+	                    .subtract(this.d.clone().multiply(this.kD));
+	                this.d = err_t;
+	                this.acc.add(correction);
 	            }
 	            this.pos.add(this.vel.clone()
 	                .multiplyScalar(dt)
@@ -1302,9 +1169,12 @@
 	                ? -1
 	                : 1;
 	            var drag_area = Math.PI * this.radius * this.radius;
-	            var drag_coefficient = drag_area * 1.2 * 0.47 / 100;
+	            var air_density = 0.75;
+	            var drag = drag_area * this.C_d * air_density * 0.5;
+	            otherForces
+	                .multiplyScalar(this.mass)
+	                .add(new vector_1.Vector(horiz_multiplier * drag, vert_multiplier * drag));
 	            var avg_acc = otherForces
-	                .add(new vector_1.Vector(horiz_multiplier * drag_coefficient, vert_multiplier * drag_coefficient))
 	                .divideScalar(this.mass)
 	                .add(this.acc.clone())
 	                .divideScalar(2);
@@ -1326,14 +1196,16 @@
 	            if (this.pos.x + this.radius > r) {
 	                this.pos.x = r - this.radius - 1;
 	                this.vel.x *= -0.5;
+	                this.acc.x *= 0.9;
 	            }
 	            if (this.pos.y - this.radius < b) {
 	                this.vel.y *= -0.5;
 	                this.pos.y = this.radius;
 	            }
 	            if (this.pos.x - this.radius < l) {
-	                this.pos.x = l + this.radius + 1;
+	                this.pos.x = l + this.radius;
 	                this.vel.x *= -0.5;
+	                this.acc.x *= 0.9;
 	            }
 	            return this;
 	        };

@@ -7,20 +7,22 @@ export class Ball {
     public vel: Vector;
     public acc: Vector;
     public desired: Vector;
-    public i: Vector;
-    public d: Vector;
+
     public kP: Vector;
     public kI: Vector;
     public kD: Vector;
     public assist: boolean;
+    public C_d: number;
+    public i: Vector;
+    public d: Vector;
 
     constructor(radius, mass, pos, desired = new Vector(0, 0),
         vel = new Vector(0, 0),
         acc = new Vector(0, 0),
-        assist = true, i = new Vector(), d = new Vector(),
-        kP = new Vector(0.2, 0.8),
-        kI = new Vector(0.01, 0.05),
-        kD = new Vector(0.5, 1.0)) {
+        assist = false,
+        kP = new Vector(0.8, 0.8),
+        kI = new Vector(0.08, 0.5),
+        kD = new Vector(0.3, 0.1)) {
         this.radius = radius;
         this.mass = mass;
         this.pos = pos;
@@ -28,39 +30,25 @@ export class Ball {
         this.acc = acc;
         this.desired = desired;
         this.assist = assist;
-        this.i = i;
-        this.d = d;
         this.kP = kP;
         this.kI = kI;
         this.kD = kD;
+        this.C_d = 0.47;
+        this.i = new Vector();
+        this.d = new Vector();
     }
 
     public update(dt: number, otherForces: Vector): this {
+
         if (this.assist) {
-            const err_t = this.desired.clone()
-                .subtract(this.pos)
-                .multiplyScalar(1000);
+            const err_t = this.desired.clone().subtract(this.pos);
+            this.i.add(err_t.clone().multiplyScalar(dt));
+            const correction = err_t.multiply(this.kP)
+                .add(this.i.clone().multiply(this.kI))
+                .subtract(this.d.clone().multiply(this.kD));
+            this.d = err_t;
 
-            const dt_p = dt * 100;
-
-            this.i.x += (err_t.x * dt_p) / 100;
-            this.i.y += (err_t.y * dt_p) / 100;
-
-            this.d.x = ((err_t.x - this.d.x) / (dt_p + 0.001)) / 100;
-            this.d.y = ((err_t.y - this.d.y) / (dt_p + 0.001)) / 100;
-
-            const correction = new Vector(
-                err_t.x * this.kP.x +
-                this.i.x * this.kI.x +
-                this.d.x * this.kD.x,
-                err_t.y * this.kP.y +
-                this.i.y * this.kI.y +
-                this.d.y * this.kD.y
-            )
-                .divideScalar(100);
-
-            this.acc = correction;
-            //            otherForces.add(correction);
+            this.acc.add(correction);
         }
 
         this.pos.add(
@@ -80,11 +68,15 @@ export class Ball {
                 : 1;
 
         const drag_area = Math.PI * this.radius * this.radius;
-        const drag_coefficient = drag_area * 1.2 * 0.47 / 100;
-        const avg_acc = otherForces
+        const air_density = 0.75;
+        const drag = drag_area * this.C_d * air_density * 0.5;
+        otherForces
+            .multiplyScalar(this.mass)
             .add(new Vector(
-                horiz_multiplier * drag_coefficient
-                , vert_multiplier * drag_coefficient))
+                horiz_multiplier * drag,
+                vert_multiplier * drag));
+
+        const avg_acc = otherForces
             .divideScalar(this.mass)
             .add(this.acc.clone())
             .divideScalar(2);
@@ -112,6 +104,7 @@ export class Ball {
         if (this.pos.x + this.radius > r) {
             this.pos.x = r - this.radius - 1;
             this.vel.x *= -0.5;
+            this.acc.x *= 0.9;
         }
 
         if (this.pos.y - this.radius < b) {
@@ -120,10 +113,10 @@ export class Ball {
         }
 
         if (this.pos.x - this.radius < l) {
-            this.pos.x = l + this.radius + 1;
+            this.pos.x = l + this.radius;
             this.vel.x *= -0.5;
+            this.acc.x *= 0.9;
         }
-
 
         return this;
     }

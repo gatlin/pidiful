@@ -8,6 +8,7 @@ enum Direction {
     Left,
     Right,
     Up,
+    Down,
     None
 };
 
@@ -15,19 +16,13 @@ enum Actions {
     Tick,
     CanvasUpdate,
     Push,
-    UpdateKPx,
-    UpdateKIx,
-    UpdateKDx,
-    UpdateKPy,
-    UpdateKIy,
-    UpdateKDy,
-    UpdateForce,
     ToggleShowLog,
     ToggleAutoCorrect,
     SetPoint
 };
 
 type AppState = {
+    geometry: Object;
     canvasCtx: any;
     ball: Ball;
     canvasWidth: number;
@@ -36,6 +31,7 @@ type AppState = {
     lastPushTime: number;
     push_force: number;
     show_log: boolean;
+    refresh_rate: number;
 };
 
 type Action = {
@@ -43,16 +39,44 @@ type Action = {
     data?: any;
 };
 
-function new_appstate(): AppState {
+function window_geometry() {
+    const winSize = Math.min(window.innerWidth,
+        window.innerHeight - 50);
+    let viewHeight;
+    if (winSize >= 480) {
+        viewHeight = 0.75 * winSize;
+    } else {
+        viewHeight = 0.95 * winSize;
+    }
+    if (viewHeight < 480) {
+        viewHeight = window.innerWidth;
+    }
+
+    const pixelRatio = window.devicePixelRatio || 1;
+
     return {
+        viewHeight: viewHeight,
+        viewWidth: window.innerWidth,
+        pixelRation: pixelRatio
+    };
+}
+
+function new_appstate(): AppState {
+    const geom = window_geometry();
+    return {
+        geometry: geom,
         canvasCtx: null,
-        ball: new Ball(20, 1.2, new Vector(0, 0), new Vector(0, 150)),
-        canvasWidth: 800,
-        canvasHeight: 300,
+        ball: new Ball(20, 1.0, new Vector(
+            0,
+            geom.viewHeight - 20),
+            new Vector(0, geom.viewHeight / 2)),
+        canvasWidth: geom.viewWidth * 0.9,
+        canvasHeight: geom.viewHeight,
         lastFrameTime: Date.now(),
         lastPushTime: 0,
-        push_force: 250,
-        show_log: false
+        push_force: 500,
+        show_log: true,
+        refresh_rate: 1000.0 / 60.0
     };
 }
 
@@ -80,11 +104,9 @@ function update_model(action: Action, model: AppState): AppState {
         const bound_left = -1 * (model.canvasWidth / 2);
         const bound_right = model.canvasWidth / 2;
 
-        const gravity = new Vector(0, -1000);
+        const gravity = new Vector(0, -980);
 
-        /* now for the PID calculations */
-
-        model.ball = model.ball
+        model.ball
             .update(dt, gravity)
             .bounds_check(model.canvasHeight, bound_right, 0, bound_left);
 
@@ -94,6 +116,7 @@ function update_model(action: Action, model: AppState): AppState {
 
         model.lastFrameTime = currentTime;
         draw(model);
+
         return model;
     };
 
@@ -106,55 +129,24 @@ function update_model(action: Action, model: AppState): AppState {
     dispatch[Actions.Push] = () => {
         switch (action.data) {
             case Direction.Left:
-                model.ball.acc.add(new Vector(-1 * model.push_force, 0));
+                model.ball.acc.x -= model.push_force;
                 break;
             case Direction.Right:
-                model.ball.acc.add(new Vector(model.push_force, 0));
+                model.ball.acc.x += model.push_force;
                 break;
 
             case Direction.Up:
-                model.ball.acc.add(new Vector(0, model.push_force));
+                model.ball.acc.y += model.push_force;
                 break;
 
-            case Direction.None:
+            case Direction.Down:
+                model.ball.acc.y -= model.push_force;
+                break;
+
+            default:
                 model.lastPushTime = Date.now();
-                break
+                break;
         }
-        return model;
-    };
-
-    dispatch[Actions.UpdateKPx] = () => {
-        model.ball.kP.x = action.data;
-        return model;
-    };
-
-    dispatch[Actions.UpdateKIx] = () => {
-        model.ball.kI.x = action.data;
-        return model;
-    };
-
-    dispatch[Actions.UpdateKDx] = () => {
-        model.ball.kD.x = action.data;
-        return model;
-    };
-
-    dispatch[Actions.UpdateKPy] = () => {
-        model.ball.kP.y = action.data;
-        return model;
-    };
-
-    dispatch[Actions.UpdateKIy] = () => {
-        model.ball.kI.y = action.data;
-        return model;
-    };
-
-    dispatch[Actions.UpdateKDy] = () => {
-        model.ball.kD.y = action.data;
-        return model;
-    };
-
-    dispatch[Actions.UpdateForce] = () => {
-        model.push_force = action.data;
         return model;
     };
 
@@ -226,80 +218,20 @@ function main(scope) {
         }))
         .connect(scope.actions);
 
+    // down arrow
+    scope.events.keydown
+        .filter(evt => evt.getRaw().keyCode === 40)
+        .map(evt => ({
+            type: Actions.Push,
+            data: Direction.Down
+        }))
+        .connect(scope.actions);
+
+    // all
     scope.events.keyup
         .map(evt => ({
             type: Actions.Push,
             data: Direction.None
-        }))
-        .connect(scope.actions);
-
-    scope.events.change
-        .filter(evt => evt.getId() === 'inp-kP-x')
-        .map(evt => parseFloat(evt.getValue()))
-        .filter(valid_number)
-        .map(n => ({
-            type: Actions.UpdateKPx,
-            data: n
-        }))
-        .connect(scope.actions);
-
-    scope.events.change
-        .filter(evt => evt.getId() === 'inp-kI-x')
-        .map(evt => parseFloat(evt.getValue()))
-        .filter(valid_number)
-        .map(n => ({
-            type: Actions.UpdateKIx,
-            data: n
-        }))
-        .connect(scope.actions);
-
-    scope.events.change
-        .filter(evt => evt.getId() === 'inp-kD-x')
-        .map(evt => parseFloat(evt.getValue()))
-        .filter(valid_number)
-        .map(n => ({
-            type: Actions.UpdateKDx,
-            data: n
-        }))
-        .connect(scope.actions);
-
-    scope.events.change
-        .filter(evt => evt.getId() === 'inp-kP-y')
-        .map(evt => parseFloat(evt.getValue()))
-        .filter(valid_number)
-        .map(n => ({
-            type: Actions.UpdateKPy,
-            data: n
-        }))
-        .connect(scope.actions);
-
-    scope.events.change
-        .filter(evt => evt.getId() === 'inp-kI-y')
-        .map(evt => parseFloat(evt.getValue()))
-        .filter(valid_number)
-        .map(n => ({
-            type: Actions.UpdateKIy,
-            data: n
-        }))
-        .connect(scope.actions);
-
-    scope.events.change
-        .filter(evt => evt.getId() === 'inp-kD-y')
-        .map(evt => parseFloat(evt.getValue()))
-        .filter(valid_number)
-        .map(n => ({
-            type: Actions.UpdateKDy,
-            data: n
-        }))
-        .connect(scope.actions);
-
-    scope.events.change
-        .filter(evt => evt.getId() === 'inp-force')
-        .map(evt => parseFloat(evt.getValue()))
-        .filter(valid_number)
-        .map(n => ({
-            type: Actions.UpdateForce,
-            data: n
         }))
         .connect(scope.actions);
 
@@ -342,63 +274,6 @@ function main(scope) {
 }
 
 function render(state) {
-
-    const ctrl_bar = el('div', {
-        'class': 'horizontal-bar',
-        'id': 'ctrl-bar'
-    }, [
-            el('span', {}, [
-                el('label', { 'for': 'inp-kP-x' }, ['kP.x =']),
-                el('input', {
-                    'type': 'text',
-                    'value': state.ball.kP.x,
-                    'id': 'inp-kP-x'
-                }, []),
-                el('label', { 'for': 'inp-kP-y' }, ['kP.y =']),
-                el('input', {
-                    'type': 'text',
-                    'value': state.ball.kP.y,
-                    'id': 'inp-kP-y'
-                }, [])
-            ]),
-            el('span', {}, [
-                el('label', { 'for': 'inp-kI-x' }, ['kI.x =']),
-                el('input', {
-                    'type': 'text',
-                    'value': state.ball.kI.x,
-                    'id': 'inp-kI-x'
-                }, []),
-                el('label', { 'for': 'inp-kI-y' }, ['kI.y =']),
-                el('input', {
-                    'type': 'text',
-                    'value': state.ball.kI.y,
-                    'id': 'inp-kI-y'
-                }, [])
-            ]),
-            el('span', {}, [
-                el('label', { 'for': 'inp-kD-x' }, ['kD.x =']),
-                el('input', {
-                    'type': 'text',
-                    'value': state.ball.kD.x,
-                    'id': 'inp-kD-x'
-                }, []),
-                el('label', { 'for': 'inp-kD-y' }, ['kD.y =']),
-                el('input', {
-                    'type': 'text',
-                    'value': state.ball.kD.y,
-                    'id': 'inp-kD-y'
-                }, [])
-            ]),
-            el('span', {}, [
-                el('label', { 'for': 'inp-force' }, ['F =']),
-                el('input', {
-                    'type': 'text',
-                    'value': state.push_force,
-                    'id': 'inp-force'
-                }, [])
-            ])
-        ]);
-
 
     const push_bar = el('div', {
         'class': 'horizontal-bar',
@@ -446,7 +321,6 @@ function render(state) {
             .subscribe(canvasMailbox),
         auto_correct_ctrl,
         push_bar,
-        ctrl_bar,
         show_log_ctrl,
         log_bar,
     ]);
@@ -465,13 +339,9 @@ const app = new App<AppState>({
 
 const runtime = app.start();
 
-runtime.state.recv(st => {
-    //console.log('state updated');
-});
-
-function tick() {
+function tick(ts) {
     runtime.ports.inbound.tick.send(null);
     window.requestAnimationFrame(tick);
 }
 
-tick();
+window.requestAnimationFrame(tick);
