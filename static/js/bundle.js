@@ -63,7 +63,7 @@
 	        Actions[Actions["CanvasUpdate"] = 1] = "CanvasUpdate";
 	        Actions[Actions["Push"] = 2] = "Push";
 	        Actions[Actions["ToggleShowLog"] = 3] = "ToggleShowLog";
-	        Actions[Actions["ToggleAutoCorrect"] = 4] = "ToggleAutoCorrect";
+	        Actions[Actions["ToggleRun"] = 4] = "ToggleRun";
 	        Actions[Actions["SetPoint"] = 5] = "SetPoint";
 	    })(Actions || (Actions = {}));
 	    ;
@@ -91,7 +91,7 @@
 	        return {
 	            geometry: geom,
 	            canvasCtx: null,
-	            ball: new ball_1.Ball(20, 1.0, new vector_1.Vector(0, geom.viewHeight - 20), new vector_1.Vector(0, geom.viewHeight / 2)),
+	            ball: new ball_1.Ball(20, 1.0, new vector_1.Vector(0, 20), new vector_1.Vector(0, 20)),
 	            canvasWidth: geom.viewWidth * 0.9,
 	            canvasHeight: geom.viewHeight,
 	            lastFrameTime: Date.now(),
@@ -140,16 +140,16 @@
 	        dispatch[Actions.Push] = function () {
 	            switch (action.data) {
 	                case Direction.Left:
-	                    model.ball.acc.x -= model.push_force;
+	                    model.ball.move(new vector_1.Vector(-1 * model.push_force, 0));
 	                    break;
 	                case Direction.Right:
-	                    model.ball.acc.x += model.push_force;
+	                    model.ball.move(new vector_1.Vector(model.push_force, 0));
 	                    break;
 	                case Direction.Up:
-	                    model.ball.acc.y += model.push_force;
+	                    model.ball.move(new vector_1.Vector(0, model.push_force));
 	                    break;
 	                case Direction.Down:
-	                    model.ball.acc.y -= model.push_force;
+	                    model.ball.move(new vector_1.Vector(0, -1 * model.push_force));
 	                    break;
 	                default:
 	                    model.lastPushTime = Date.now();
@@ -161,15 +161,14 @@
 	            model.show_log = !model.show_log;
 	            return model;
 	        };
-	        dispatch[Actions.ToggleAutoCorrect] = function () {
-	            model.ball.assist = !model.ball.assist;
-	            if (model.ball.assist) {
-	                model.ball.i = new vector_1.Vector();
-	                model.ball.d = new vector_1.Vector();
-	            }
+	        dispatch[Actions.ToggleRun] = function () {
+	            model.ball.toggleRunning();
 	            return model;
 	        };
 	        dispatch[Actions.SetPoint] = function () {
+	            if (!model.ball.run) {
+	                return model;
+	            }
 	            var evt = action.data;
 	            var rect = evt
 	                .target
@@ -235,15 +234,15 @@
 	        }); })
 	            .connect(scope.actions);
 	        scope.events.change
-	            .filter(function (evt) { return evt.getId() === 'auto-correct-ctrl'; })
+	            .filter(function (evt) { return evt.getId() === 'run-ctrl'; })
 	            .map(function (evt) { return ({
-	            type: Actions.ToggleAutoCorrect
+	            type: Actions.ToggleRun
 	        }); })
 	            .connect(scope.actions);
 	        scope.events.keydown
 	            .filter(function (evt) { return evt.getRaw().keyCode === 32; })
 	            .map(function (evt) { return ({
-	            type: Actions.ToggleAutoCorrect
+	            type: Actions.ToggleRun
 	        }); })
 	            .connect(scope.actions);
 	        scope.events.click
@@ -281,15 +280,15 @@
 	            show_log_ctrl_attrs['checked'] = 'checked';
 	        }
 	        var show_log_ctrl = alm_1.el('input', show_log_ctrl_attrs, []);
-	        var auto_correct_attrs = {
+	        var run_attrs = {
 	            'type': 'checkbox',
-	            'id': 'auto-correct-ctrl',
-	            'key': 'auto-correct-' + Date.now().toString()
+	            'id': 'run-ctrl',
+	            'key': 'run-key-' + Date.now().toString()
 	        };
-	        if (state.ball.assist) {
-	            auto_correct_attrs['checked'] = 'checked';
+	        if (state.ball.run) {
+	            run_attrs['checked'] = 'checked';
 	        }
-	        var auto_correct_ctrl = alm_1.el('input', auto_correct_attrs, []);
+	        var run_ctrl = alm_1.el('input', run_attrs, []);
 	        return alm_1.el('div', { 'id': 'main' }, [
 	            alm_1.el('canvas', {
 	                'id': 'the_canvas',
@@ -297,7 +296,7 @@
 	                'width': state.canvasWidth
 	            }, [])
 	                .subscribe(canvasMailbox),
-	            auto_correct_ctrl,
+	            run_ctrl,
 	            push_bar,
 	            show_log_ctrl,
 	            log_bar,
@@ -1124,38 +1123,63 @@
 	    "use strict";
 	    exports.__esModule = true;
 	    var Ball = (function () {
-	        function Ball(radius, mass, pos, desired, vel, acc, assist, kP, kI, kD) {
+	        function Ball(radius, mass, pos, desired, vel, acc, run, kP, kI, kD) {
 	            if (desired === void 0) { desired = new vector_1.Vector(0, 0); }
 	            if (vel === void 0) { vel = new vector_1.Vector(0, 0); }
 	            if (acc === void 0) { acc = new vector_1.Vector(0, 0); }
-	            if (assist === void 0) { assist = false; }
-	            if (kP === void 0) { kP = new vector_1.Vector(0.8, 0.9); }
-	            if (kI === void 0) { kI = new vector_1.Vector(0.08, 0.5); }
-	            if (kD === void 0) { kD = new vector_1.Vector(0.3, 0.1); }
+	            if (run === void 0) { run = false; }
+	            if (kP === void 0) { kP = new vector_1.Vector(0.8, 0.85); }
+	            if (kI === void 0) { kI = new vector_1.Vector(0.05, 0.1); }
+	            if (kD === void 0) { kD = new vector_1.Vector(0.01, 0.05); }
 	            this.radius = radius;
 	            this.mass = mass;
 	            this.pos = pos;
 	            this.vel = vel;
 	            this.acc = acc;
 	            this.desired = desired;
-	            this.assist = assist;
+	            this.run = run;
 	            this.kP = kP;
 	            this.kI = kI;
 	            this.kD = kD;
 	            this.C_d = 0.47;
 	            this.i = new vector_1.Vector();
-	            this.d = new vector_1.Vector();
+	            this.lastPos = new vector_1.Vector();
 	        }
+	        Ball.prototype.move = function (vec) {
+	            this.acc.add(vec);
+	            return this;
+	        };
+	        Ball.prototype.activate = function () {
+	            this.run = true;
+	            this.lastPos = this.pos.clone();
+	            this.i = new vector_1.Vector();
+	            return this;
+	        };
+	        Ball.prototype.deactivate = function () {
+	            this.run = false;
+	            this.desired = this.pos.clone();
+	            return this;
+	        };
+	        Ball.prototype.toggleRunning = function () {
+	            if (this.run) {
+	                return this.deactivate();
+	            }
+	            return this.activate();
+	        };
 	        Ball.prototype.update = function (dt, otherForces) {
-	            if (this.assist) {
+	            if (this.run) {
 	                var err_t = this.desired.clone().subtract(this.pos);
-	                this.i.add(err_t.clone().multiplyScalar(dt));
+	                var inp_t = this.pos.clone().subtract(this.lastPos);
+	                this.i.add(err_t.clone().multiplyScalar(dt).multiply(this.kI));
 	                var correction = err_t.multiply(this.kP)
-	                    .add(this.i.clone().multiply(this.kI))
-	                    .subtract(this.d.clone().multiply(this.kD));
-	                this.d = err_t;
+	                    .add(this.i)
+	                    .subtract(inp_t.multiply(this.kD));
 	                this.acc.add(correction);
 	            }
+	            else {
+	                this.desired = this.pos.clone();
+	            }
+	            this.lastPos = this.pos.clone();
 	            this.pos.add(this.vel.clone()
 	                .multiplyScalar(dt)
 	                .add(this.acc.clone()

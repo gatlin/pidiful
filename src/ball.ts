@@ -11,46 +11,74 @@ export class Ball {
     public kP: Vector;
     public kI: Vector;
     public kD: Vector;
-    public assist: boolean;
+    public run: boolean;
     public C_d: number;
     public i: Vector;
-    public d: Vector;
+    public lastPos: Vector;
 
     constructor(radius, mass, pos, desired = new Vector(0, 0),
         vel = new Vector(0, 0),
         acc = new Vector(0, 0),
-        assist = false,
-        kP = new Vector(0.8, 0.8),
-        kI = new Vector(0.08, 0.5),
-        kD = new Vector(0.3, 0.1)) {
+        run = false,
+        kP = new Vector(0.8, 0.85),
+        kI = new Vector(0.05, 0.1),
+        kD = new Vector(0.01, 0.05)) {
         this.radius = radius;
         this.mass = mass;
         this.pos = pos;
         this.vel = vel;
         this.acc = acc;
         this.desired = desired;
-        this.assist = assist;
+        this.run = run;
         this.kP = kP;
         this.kI = kI;
         this.kD = kD;
         this.C_d = 0.47;
         this.i = new Vector();
-        this.d = new Vector();
+        this.lastPos = new Vector();
+    }
+
+    public move(vec) {
+        this.acc.add(vec);
+        return this;
+    }
+
+    public activate() {
+        this.run = true;
+        this.lastPos = this.pos.clone();
+        this.i = new Vector();
+        return this;
+    }
+
+    public deactivate() {
+        this.run = false;
+        this.desired = this.pos.clone();
+        return this;
+    }
+
+    public toggleRunning() {
+        if (this.run) {
+            return this.deactivate();
+        }
+        return this.activate();
     }
 
     public update(dt: number, otherForces: Vector): this {
 
-        if (this.assist) {
+        if (this.run) {
             const err_t = this.desired.clone().subtract(this.pos);
-            this.i.add(err_t.clone().multiplyScalar(dt));
+            const inp_t = this.pos.clone().subtract(this.lastPos);
+            this.i.add(err_t.clone().multiplyScalar(dt).multiply(this.kI));
             const correction = err_t.multiply(this.kP)
-                .add(this.i.clone().multiply(this.kI))
-                .subtract(this.d.clone().multiply(this.kD));
-            this.d = err_t;
-
+                .add(this.i)
+                .subtract(inp_t.multiply(this.kD));
             this.acc.add(correction);
         }
+        else {
+            this.desired = this.pos.clone();
+        }
 
+        this.lastPos = this.pos.clone();
         this.pos.add(
             this.vel.clone()
                 .multiplyScalar(dt)

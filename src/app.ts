@@ -17,7 +17,7 @@ enum Actions {
     CanvasUpdate,
     Push,
     ToggleShowLog,
-    ToggleAutoCorrect,
+    ToggleRun,
     SetPoint
 };
 
@@ -66,10 +66,11 @@ function new_appstate(): AppState {
     return {
         geometry: geom,
         canvasCtx: null,
-        ball: new Ball(20, 1.0, new Vector(
-            0,
-            geom.viewHeight - 20),
-            new Vector(0, geom.viewHeight / 2)),
+        ball: new Ball(
+            20,
+            1.0,
+            new Vector(0, 20),
+            new Vector(0, 20)),
         canvasWidth: geom.viewWidth * 0.9,
         canvasHeight: geom.viewHeight,
         lastFrameTime: Date.now(),
@@ -129,18 +130,18 @@ function update_model(action: Action, model: AppState): AppState {
     dispatch[Actions.Push] = () => {
         switch (action.data) {
             case Direction.Left:
-                model.ball.acc.x -= model.push_force;
+                model.ball.move(new Vector(-1 * model.push_force, 0));
                 break;
             case Direction.Right:
-                model.ball.acc.x += model.push_force;
+                model.ball.move(new Vector(model.push_force, 0));
                 break;
 
             case Direction.Up:
-                model.ball.acc.y += model.push_force;
+                model.ball.move(new Vector(0, model.push_force));
                 break;
 
             case Direction.Down:
-                model.ball.acc.y -= model.push_force;
+                model.ball.move(new Vector(0, -1 * model.push_force));
                 break;
 
             default:
@@ -155,16 +156,15 @@ function update_model(action: Action, model: AppState): AppState {
         return model;
     }
 
-    dispatch[Actions.ToggleAutoCorrect] = () => {
-        model.ball.assist = !model.ball.assist;
-        if (model.ball.assist) {
-            model.ball.i = new Vector();
-            model.ball.d = new Vector();
-        }
+    dispatch[Actions.ToggleRun] = () => {
+        model.ball.toggleRunning();
         return model;
     }
 
     dispatch[Actions.SetPoint] = () => {
+        if (!model.ball.run) {
+            return model;
+        }
         const evt = action.data;
         const rect = evt
             .target
@@ -243,16 +243,16 @@ function main(scope) {
         .connect(scope.actions);
 
     scope.events.change
-        .filter(evt => evt.getId() === 'auto-correct-ctrl')
+        .filter(evt => evt.getId() === 'run-ctrl')
         .map(evt => ({
-            type: Actions.ToggleAutoCorrect
+            type: Actions.ToggleRun
         }))
         .connect(scope.actions);
 
     scope.events.keydown
         .filter(evt => evt.getRaw().keyCode === 32)
         .map(evt => ({
-            type: Actions.ToggleAutoCorrect
+            type: Actions.ToggleRun
         }))
         .connect(scope.actions);
 
@@ -300,17 +300,17 @@ function render(state) {
     }
     const show_log_ctrl = el('input', show_log_ctrl_attrs, []);
 
-    const auto_correct_attrs = {
+    const run_attrs = {
         'type': 'checkbox',
-        'id': 'auto-correct-ctrl',
-        'key': 'auto-correct-' + Date.now().toString()
+        'id': 'run-ctrl',
+        'key': 'run-key-' + Date.now().toString()
     };
 
-    if (state.ball.assist) {
-        auto_correct_attrs['checked'] = 'checked';
+    if (state.ball.run) {
+        run_attrs['checked'] = 'checked';
     }
 
-    const auto_correct_ctrl = el('input', auto_correct_attrs, []);
+    const run_ctrl = el('input', run_attrs, []);
 
     return el('div', { 'id': 'main' }, [
         el('canvas', {
@@ -319,7 +319,7 @@ function render(state) {
             'width': state.canvasWidth
         }, [])
             .subscribe(canvasMailbox),
-        auto_correct_ctrl,
+        run_ctrl,
         push_bar,
         show_log_ctrl,
         log_bar,
