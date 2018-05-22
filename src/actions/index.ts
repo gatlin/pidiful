@@ -11,7 +11,8 @@ export enum Actions {
     CanvasUpdate,
     ToggleShowLog,
     ToggleRun,
-    SetPoint
+    SetPoint,
+    Push
 };
 
 export const tick = () => ({
@@ -33,5 +34,10 @@ export const toggleRun = () => ({
 
 export const setPoint = data => ({
     type: Actions.SetPoint,
+    data
+});
+
+export const push = data => ({
+    type: Actions.Push,
     data
 });

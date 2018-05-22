@@ -88,6 +88,22 @@ const reducer = (state: State, action): State => {
             };
         }
 
+        case Actions.Push: {
+            switch (action.data) {
+                case Direction.Left:
+                    break;
+
+                case Direction.Right:
+                    break;
+
+                case Direction.Up:
+                    break;
+
+                case Direction.Down:
+                    break;
+            }
+        }
+
         default:
             return state;
     }

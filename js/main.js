@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 3);
+/******/ 	return __webpack_require__(__webpack_require__.s = 4);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -78,7 +78,7 @@ var __assign = (this && this.__assign) || Object.assign || function(t) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var vdom_1 = __webpack_require__(4);
+var vdom_1 = __webpack_require__(5);
 function makeReducer(reducers) {
     var reducerKeys = Object.keys(reducers);
     return function (state, action) {
@@ -442,6 +442,7 @@ var Actions;
     Actions[Actions["ToggleShowLog"] = 2] = "ToggleShowLog";
     Actions[Actions["ToggleRun"] = 3] = "ToggleRun";
     Actions[Actions["SetPoint"] = 4] = "SetPoint";
+    Actions[Actions["Push"] = 5] = "Push";
 })(Actions = exports.Actions || (exports.Actions = {}));
 ;
 exports.tick = function () { return ({
@@ -461,6 +462,10 @@ exports.setPoint = function (data) { return ({
     type: Actions.SetPoint,
     data: data
 }); };
+exports.push = function (data) { return ({
+    type: Actions.Push,
+    data: data
+}); };
 
 
 /***/ }),
@@ -470,8 +475,63 @@ exports.setPoint = function (data) { return ({
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
+var vector_1 = __webpack_require__(1);
+var ball_1 = __webpack_require__(6);
+var Direction;
+(function (Direction) {
+    Direction[Direction["Left"] = 0] = "Left";
+    Direction[Direction["Right"] = 1] = "Right";
+    Direction[Direction["Up"] = 2] = "Up";
+    Direction[Direction["Down"] = 3] = "Down";
+    Direction[Direction["None"] = 4] = "None";
+})(Direction = exports.Direction || (exports.Direction = {}));
+;
+function window_geometry() {
+    var winSize = Math.min(window.innerWidth, window.innerHeight - 50);
+    var viewHeight;
+    if (winSize >= 480) {
+        viewHeight = 0.75 * winSize;
+    }
+    else {
+        viewHeight = 0.95 * winSize;
+    }
+    if (viewHeight < 480) {
+        viewHeight = window.innerWidth;
+    }
+    var pixelRatio = window.devicePixelRatio || 1;
+    return {
+        viewHeight: viewHeight,
+        viewWidth: window.innerWidth,
+        pixelRation: pixelRatio
+    };
+}
+exports.window_geometry = window_geometry;
+exports.initialState = function () {
+    var geometry = window_geometry();
+    return {
+        geometry: geometry,
+        canvasCtx: null,
+        ball: new ball_1.default(20, 1.0, new vector_1.default(0, 20), new vector_1.default(0, 20)).toggleRunning(),
+        canvasWidth: geometry.viewWidth - 10,
+        canvasHeight: geometry.viewHeight,
+        lastFrameTime: Date.now(),
+        lastPushTime: 0,
+        push_force: 500,
+        show_log: true,
+        refresh_rate: 1000.0 / 60.0
+    };
+};
+
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
 var alm_1 = __webpack_require__(0);
-var store_1 = __webpack_require__(5);
+var store_1 = __webpack_require__(3);
 var actions_1 = __webpack_require__(2);
 var MainComponent_1 = __webpack_require__(7);
 var reducer_1 = __webpack_require__(13);
@@ -492,7 +552,7 @@ window.requestAnimationFrame(tock);
 
 
 /***/ }),
-/* 4 */
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -698,61 +758,6 @@ function diff_dom(parent, a, b, index) {
     }
 }
 exports.diff_dom = diff_dom;
-
-
-/***/ }),
-/* 5 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var vector_1 = __webpack_require__(1);
-var ball_1 = __webpack_require__(6);
-var Direction;
-(function (Direction) {
-    Direction[Direction["Left"] = 0] = "Left";
-    Direction[Direction["Right"] = 1] = "Right";
-    Direction[Direction["Up"] = 2] = "Up";
-    Direction[Direction["Down"] = 3] = "Down";
-    Direction[Direction["None"] = 4] = "None";
-})(Direction = exports.Direction || (exports.Direction = {}));
-;
-function window_geometry() {
-    var winSize = Math.min(window.innerWidth, window.innerHeight - 50);
-    var viewHeight;
-    if (winSize >= 480) {
-        viewHeight = 0.75 * winSize;
-    }
-    else {
-        viewHeight = 0.95 * winSize;
-    }
-    if (viewHeight < 480) {
-        viewHeight = window.innerWidth;
-    }
-    var pixelRatio = window.devicePixelRatio || 1;
-    return {
-        viewHeight: viewHeight,
-        viewWidth: window.innerWidth,
-        pixelRation: pixelRatio
-    };
-}
-exports.window_geometry = window_geometry;
-exports.initialState = function () {
-    var geometry = window_geometry();
-    return {
-        geometry: geometry,
-        canvasCtx: null,
-        ball: new ball_1.default(20, 1.0, new vector_1.default(0, 20), new vector_1.default(0, 20)).toggleRunning(),
-        canvasWidth: geometry.viewWidth - 10,
-        canvasHeight: geometry.viewHeight,
-        lastFrameTime: Date.now(),
-        lastPushTime: 0,
-        push_force: 500,
-        show_log: true,
-        refresh_rate: 1000.0 / 60.0
-    };
-};
 
 
 /***/ }),
@@ -1574,6 +1579,7 @@ var __assign = (this && this.__assign) || Object.assign || function(t) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var actions_1 = __webpack_require__(2);
+var store_1 = __webpack_require__(3);
 var vector_1 = __webpack_require__(1);
 function draw(_a) {
     var canvasCtx = _a.canvasCtx, canvasWidth = _a.canvasWidth, canvasHeight = _a.canvasHeight, ball = _a.ball;
@@ -1624,6 +1630,18 @@ var reducer = function (state, action) {
             var yCoord = evt.clientY - rect.top;
             ball.desired = new vector_1.default(xCoord - (state.canvasWidth / 2), state.canvasHeight - yCoord);
             return __assign({}, state, { ball: ball });
+        }
+        case actions_1.Actions.Push: {
+            switch (action.data) {
+                case store_1.Direction.Left:
+                    break;
+                case store_1.Direction.Right:
+                    break;
+                case store_1.Direction.Up:
+                    break;
+                case store_1.Direction.Down:
+                    break;
+            }
         }
         default:
             return state;
