@@ -1,11 +1,20 @@
 body {
     padding: 5px;
     font-family: sans-serif;
-    }
+}
+
+#the_app {
+    outline: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    align-content: flex-start;
+}
 
 #the_canvas {
     display: block;
-    margin: 0 auto;
+    align-self: center;
     border: 1px solid #b9b9b9;
 }
 
@@ -15,29 +24,25 @@ body {
     text-align: center;
 }
 
-#ctrl-bar {
-    text-align: center;
-    }
-
 .horizontal-bar span {
     display: block;
     margin: 0 auto;
     width: 800px;
     border-left: 1px solid #b9b9b9;
     border-right: 1px solid #b9b9b9;
-    }
+}
 
 label {
     margin-right: 5px;
-    }
+}
 
 #ctrl-bar span:first-child {
     border-top: 1px solid #b9b9b9;
-    }
+}
 
 #ctrl-bar span:last-child {
     border-bottom: 1px solid #b9b9b9;
-    }
+}
 
 #ctrl-bar span label {
     line-height: 22px;
@@ -58,7 +63,7 @@ label {
 #right-btn {
     border-right: 1px solid #b9b9b9;
     border-left: 0;
-    }
+}
 
 input {
     border: 3px solid rgba(0,0,0,0);
@@ -66,4 +71,24 @@ input {
     box-sizing: border-box;
     line-height: 22px;
     text-align: right;
-    }
+}
+
+.ctrl {
+    width: 100%;
+}
+
+.ctrl label{
+    padding: 2px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.ctrl label:hover {
+    background-color: #b9b9b9;
+}
+
+#log-bar {
+    padding: 2px;
+}

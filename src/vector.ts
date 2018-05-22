@@ -1,4 +1,4 @@
-export class Vector {
+export default class Vector {
     public x: number;
     public y: number;
 
@@ -6,11 +6,6 @@ export class Vector {
         this.x = x;
         this.y = y;
     }
-
-    public getX() { return this.x; }
-    public getY() { return this.y; }
-
-    public
 
     public length() {
         return Math.sqrt(
@@ -117,6 +112,8 @@ export class Vector {
     }
 
     public toString() {
-        return '<' + this.x + ' , ' + this.y + '>';
+        const x = Number(this.x.toFixed(3));
+        const y = Number(this.y.toFixed(3));
+        return `<${x} , ${y}>`;
     }
 }

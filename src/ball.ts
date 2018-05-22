@@ -1,39 +1,23 @@
-import { Vector } from './vector';
+import Vector from './vector';
 
-export class Ball {
-    public radius: number;
-    public mass: number;
-    public pos: Vector;
-    public vel: Vector;
-    public acc: Vector;
-    public desired: Vector;
+export default class Ball {
 
-    public kP: Vector;
-    public kI: Vector;
-    public kD: Vector;
-    public run: boolean;
     public C_d: number;
     public i: Vector;
     public lastPos: Vector;
 
-    constructor(radius, mass, pos, desired = new Vector(0, 0),
-        vel = new Vector(0, 0),
-        acc = new Vector(0, 0),
-        run = false,
-        kP = new Vector(0.8, 0.85),
-        kI = new Vector(0.05, 0.15),
-        kD = new Vector(0.01, 0.05)) {
-        this.radius = radius;
-        this.mass = mass;
-        this.pos = pos;
-        this.vel = vel;
-        this.acc = acc;
-        this.desired = desired;
-        this.run = run;
-        this.kP = kP;
-        this.kI = kI;
-        this.kD = kD;
-        this.C_d = 0.47;
+    constructor(
+        public radius: number,
+        public mass: number,
+        public pos: Vector,
+        public desired: Vector = new Vector(0, 0),
+        public vel: Vector = new Vector(0, 0),
+        public acc: Vector = new Vector(0, 0),
+        public run: boolean = false,
+        public kP: Vector = new Vector(0.8, 0.85),
+        public kI: Vector = new Vector(0.05, 0.15),
+        public kD: Vector = new Vector(0.01, 0.05)) {
+        this.C_d = 0.27;
         this.i = new Vector();
         this.lastPos = new Vector();
     }
@@ -64,12 +48,12 @@ export class Ball {
     }
 
     public update(dt: number, otherForces: Vector): this {
-
         if (this.run) {
             const err_t = this.desired.clone().subtract(this.pos);
             const inp_t = this.pos.clone().subtract(this.lastPos);
             this.i.add(err_t.clone().multiplyScalar(dt).multiply(this.kI));
-            const correction = err_t.multiply(this.kP)
+            const correction = err_t
+                .multiply(this.kP)
                 .add(this.i)
                 .subtract(inp_t.multiply(this.kD));
             this.acc.add(correction);
@@ -85,6 +69,10 @@ export class Ball {
                 .add(this.acc.clone()
                     .multiplyScalar(0.5 * dt * dt)));
 
+        const drag_area = Math.PI * this.radius * this.radius;
+        const air_density = 0.75;
+        const drag = drag_area * this.C_d * air_density * 0.5;
+
         const horiz_multiplier = this.vel.x === 0
             ? 0 : this.vel.x > 0
                 ? -1
@@ -95,9 +83,6 @@ export class Ball {
                 ? -1
                 : 1;
 
-        const drag_area = Math.PI * this.radius * this.radius;
-        const air_density = 0.75;
-        const drag = drag_area * this.C_d * air_density * 0.5;
         otherForces
             .multiplyScalar(this.mass)
             .add(new Vector(

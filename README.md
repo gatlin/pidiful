@@ -1,70 +1,40 @@
-# alm-template
+# PIDiful
 
-This is a project template for quickly starting [Alm][alm] apps and the
-associated project infrastructure.
+(c) 2018 Gatlin Johnson <gatlin@niltag.net>
 
-Note: this template assumes that you'll be writing TypeScript files in `src`
-and that at least one of them will be called `app.ts`.
+# What?
 
-# Usage
+PIDiful is a little toy simulation I made to learn about PID controllers (with a
+specific interest in a minimal autopilot algorithm). You can try it out at
+[http://niltag.net/pidiful](http://niltag.net/pidiful).
 
-It is assumed that you have gulp installed.
+# How does one use it?
 
-After you have cloned this repository run the following in your command line:
+You click inside the box to mark a *set point*, and the little ball will try and
+fly to it by adjusting its PID error. This in turn adjusts the acceleration.
 
-    $> cp -r alm-template mynewapp
-    $> cd mynewapp
-    $> sh init.sh
-    $> npm install
+You can "turn off" the ball by clicking the "Running" checkbox or hitting the
+space bar.
 
-When you run `sh init.sh` you'll be prompted for a few questions to start your
-`package.json` file. `init.sh` and `package.json.sample` will be added to the
-included `.gitignore` file for you as well so if you forget to delete them
-no worries.
+# What is going on?
 
-You'll have a few gulp tasks created for you as well:
+At its heart the ball implements a simple PID controller. Initially the ball
+considers itself to be at an origin position `<X, Y>`, with velocity `<0, 0>`
+and acceleration `<0, 0>`. A second position vector is stored as well: the last
+position the ball *believed* it was at.
 
-- `make` - creates a bundle file in `static/js` which the default `index.html`
-already refers to.
+When a set point is marked at position `<X', Y'>`, the error signal is set to
+`<X' - X, Y' - Y>`. A correction vector is computed from this and the last
+believed position, which is added to the acceleration.
 
-- `dist` - takes the file created by `make`, uglifies it, and puts it in the
-`dist` directory. It also concatenates all JavaScript files in `static/vendor`
-and creates a `dist/vendor.js` file.
+The current position is stored as the last believed position and then updated
+using the current believed velocity.
 
-- `clean` - deletes build artifacts.
+Finally, an average acceleration is computed incorporating drag and gravity and
+used to update the velocity.
 
-- `serve` - serves the top-level directory at `localhost:3000`.
+There's plenty of room for improvement but I think it's neat.
 
-# Project structure
+# Questions / Comments / Free Money
 
-    alm-template/
-    |
-    +- .gitignore           # prepopulated with useful entries
-    |
-    +- dist/                # where uglified scripts go
-    |
-    +- gulpfile.js
-    |
-    +- index.html           # your project's index.html page
-    |
-    +- static/              # where static assets go during development
-    |  |
-    |  +- css/
-    |  |  |
-    |  |  +- main.css       # edit your CSS however you like
-    |  |  |
-    |  |  +- reset.css
-    |  |
-    |  +- js/               # your code bundle will go here
-    |  |
-    |  +- vendor/           # vendor stuff will go here
-    |
-    +- tmp/                 # used while making stuff
-
-# Todo
-
-- Handling CSS tasks as well
-- Some way for `gulp dist` to rewrite the important parts of `index.html` and
-produce a standalone static site in `dist`.
-
-[alm]: http://niltag.net/Alm
+Email me at gatlin@niltag.net. Thanks!
