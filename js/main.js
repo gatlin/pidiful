@@ -802,6 +802,38 @@ var Ball = (function () {
         return this.activate();
     };
     Ball.prototype.update = function (dt) {
+        var gravity = new vector_1.default(0, -980);
+        var drag_area = Math.PI * this.radius * this.radius;
+        var air_density = 0.75;
+        var drag = drag_area * this.C_d * air_density * 0.5;
+        var horiz_multiplier = this.vel.x === 0
+            ? 0 : this.vel.x > 0
+            ? -1
+            : 1;
+        var vert_multiplier = this.vel.y === 0
+            ? 0 : this.vel.y > 0
+            ? -1
+            : 1;
+        var reality = gravity
+            .multiplyScalar(this.mass)
+            .add(new vector_1.default(horiz_multiplier * drag, vert_multiplier * drag));
+        this.acc.add(reality);
+        this.lastPos = this.pos.clone();
+        this.pos.add(this.vel.clone()
+            .multiplyScalar(dt)
+            .add(this.acc.clone()
+            .multiplyScalar(0.5 * dt * dt)));
+        this.vel.add(this.acc.multiplyScalar(dt));
+        if (Math.abs(this.acc.x) <= 0.001) {
+            this.acc.floor();
+        }
+        if (Math.abs(this.vel.x) < 0.001 ||
+            Math.abs(this.vel.y) < 0.001) {
+            this.vel.floor();
+        }
+        return this;
+    };
+    Ball.prototype.pid = function (dt) {
         if (this.run) {
             var err_t = this.desired.clone().subtract(this.pos);
             this.error = err_t.clone();
@@ -816,19 +848,6 @@ var Ball = (function () {
         }
         else {
             this.desired = this.pos.clone();
-        }
-        this.lastPos = this.pos.clone();
-        this.pos.add(this.vel.clone()
-            .multiplyScalar(dt)
-            .add(this.acc.clone()
-            .multiplyScalar(0.5 * dt * dt)));
-        this.vel.add(this.acc.multiplyScalar(dt));
-        if (Math.abs(this.acc.x) <= 0.001) {
-            this.acc.floor();
-        }
-        if (Math.abs(this.vel.x) < 0.001 ||
-            Math.abs(this.vel.y) < 0.001) {
-            this.vel.floor();
         }
         return this;
     };
@@ -1587,24 +1606,9 @@ var reducer = function (state, action) {
             var dt = (currentTime - state.lastFrameTime) / 1000;
             var bound_left = -1 * (state.canvasWidth / 2);
             var bound_right = state.canvasWidth / 2;
-            var gravity = new vector_1.default(0, -980);
-            var drag_area = Math.PI * state.ball.radius * state.ball.radius;
-            var air_density = 0.75;
-            var drag = drag_area * state.ball.C_d * air_density * 0.5;
-            var horiz_multiplier = state.ball.vel.x === 0
-                ? 0 : state.ball.vel.x > 0
-                ? -1
-                : 1;
-            var vert_multiplier = state.ball.vel.y === 0
-                ? 0 : state.ball.vel.y > 0
-                ? -1
-                : 1;
-            var reality = gravity
-                .multiplyScalar(state.ball.mass)
-                .add(new vector_1.default(horiz_multiplier * drag, vert_multiplier * drag));
             var ball = state.ball
-                .adjust(reality)
                 .update(dt)
+                .pid(dt)
                 .bounds_check(state.canvasHeight, bound_right, 0, bound_left);
             var acc = ball.acc;
             draw(state);

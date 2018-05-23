@@ -55,24 +55,30 @@ export default class Ball {
         return this.activate();
     }
 
+    // Each thing in this particular universe must take care of its own physics
     public update(dt: number): this {
-        if (this.run) {
-            const err_t = this.desired.clone().subtract(this.pos);
-            this.error = err_t.clone();
-            const inp_t = this.pos.clone().subtract(this.lastPos);
+        const gravity = new Vector(0, -980);
+        const drag_area = Math.PI * this.radius * this.radius;
+        const air_density = 0.75;
+        const drag = drag_area * this.C_d * air_density * 0.5;
 
-            this.p = err_t.multiply(this.kP);
-            this.i.add(err_t.clone().multiplyScalar(dt).multiply(this.kI));
-            this.d = inp_t.multiply(this.kD);
+        const horiz_multiplier = this.vel.x === 0
+            ? 0 : this.vel.x > 0
+                ? -1
+                : 1;
 
-            const correction = this.p
-                .add(this.i)
-                .subtract(this.d);
-            this.acc.add(correction);
-        }
-        else {
-            this.desired = this.pos.clone();
-        }
+        const vert_multiplier = this.vel.y === 0
+            ? 0 : this.vel.y > 0
+                ? -1
+                : 1;
+
+        const reality = gravity
+            .multiplyScalar(this.mass)
+            .add(new Vector(
+                horiz_multiplier * drag,
+                vert_multiplier * drag));
+
+        this.acc.add(reality);
 
         this.lastPos = this.pos.clone();
         this.pos.add(
@@ -91,6 +97,28 @@ export default class Ball {
             Math.abs(this.vel.y) < 0.001) {
             this.vel.floor();
         }
+        return this;
+    }
+
+    public pid(dt: number): this {
+        if (this.run) {
+            const err_t = this.desired.clone().subtract(this.pos);
+            this.error = err_t.clone();
+            const inp_t = this.pos.clone().subtract(this.lastPos);
+
+            this.p = err_t.multiply(this.kP);
+            this.i.add(err_t.clone().multiplyScalar(dt).multiply(this.kI));
+            this.d = inp_t.multiply(this.kD);
+
+            const correction = this.p
+                .add(this.i)
+                .subtract(this.d);
+            this.acc.add(correction);
+        }
+        else {
+            this.desired = this.pos.clone();
+        }
+
         return this;
     }
 

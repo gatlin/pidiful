@@ -25,30 +25,9 @@ const reducer = (state: State, action): State => {
             const bound_left = -1 * (state.canvasWidth / 2);
             const bound_right = state.canvasWidth / 2;
 
-            const gravity = new Vector(0, -980);
-            const drag_area = Math.PI * state.ball.radius * state.ball.radius;
-            const air_density = 0.75;
-            const drag = drag_area * state.ball.C_d * air_density * 0.5;
-
-            const horiz_multiplier = state.ball.vel.x === 0
-                ? 0 : state.ball.vel.x > 0
-                    ? -1
-                    : 1;
-
-            const vert_multiplier = state.ball.vel.y === 0
-                ? 0 : state.ball.vel.y > 0
-                    ? -1
-                    : 1;
-
-            const reality = gravity
-                .multiplyScalar(state.ball.mass)
-                .add(new Vector(
-                    horiz_multiplier * drag,
-                    vert_multiplier * drag));
-
             const ball = state.ball
-                .adjust(reality)
                 .update(dt)
+                .pid(dt)
                 .bounds_check(state.canvasHeight, bound_right, 0, bound_left);
 
             const acc = ball.acc;
