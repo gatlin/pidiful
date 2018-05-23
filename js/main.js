@@ -746,7 +746,7 @@ exports.initialState = function () {
     return {
         geometry: geometry,
         canvasCtx: null,
-        ball: new physics_1.Ball(20 / geometry.pixelRatio, 1.0, new physics_1.Vector(0, 500)),
+        ball: new physics_1.Ball(20 / geometry.pixelRatio, 1.0, new physics_1.Vector(0, 0)),
         canvasWidth: geometry.viewWidth - 10,
         canvasHeight: geometry.viewHeight,
         lastFrameTime: Date.now(),
@@ -782,7 +782,7 @@ var Ball = (function (_super) {
     __extends(Ball, _super);
     function Ball(radius, mass, pos, error, vel, acc, run, kP, kI, kD) {
         if (error === void 0) { error = new vector_1.Vector(0, 0); }
-        if (vel === void 0) { vel = new vector_1.Vector(7, 0); }
+        if (vel === void 0) { vel = new vector_1.Vector(0, 0); }
         if (acc === void 0) { acc = new vector_1.Vector(0, 0); }
         if (run === void 0) { run = true; }
         if (kP === void 0) { kP = new vector_1.Vector(1.0, 7.25); }

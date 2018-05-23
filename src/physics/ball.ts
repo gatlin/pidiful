@@ -25,7 +25,7 @@ export class Ball extends Thing {
         mass: number,
         pos: Vector,
         error: Vector = new Vector(0, 0),
-        vel: Vector = new Vector(7, 0),
+        vel: Vector = new Vector(0, 0),
         acc: Vector = new Vector(0, 0),
         run: boolean = true,
         kP: Vector = new Vector(1.0, 7.25),

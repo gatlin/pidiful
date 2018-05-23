@@ -48,7 +48,7 @@ export const initialState = () => {
         ball: new Ball(
             20 / geometry.pixelRatio,
             1.0,
-            new Vector(0, 500)),
+            new Vector(0, 0)),
         canvasWidth: geometry.viewWidth - 10,
         canvasHeight: geometry.viewHeight,
         lastFrameTime: Date.now(),
