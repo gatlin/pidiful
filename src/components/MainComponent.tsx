@@ -7,6 +7,7 @@ import {
     canvasUpdate
 } from '../actions';
 import './MainComponent.css';
+import Vector from '../vector';
 
 let shownCount = 0;
 
@@ -53,6 +54,10 @@ const LogBar = props => !props.show ? <span></span> : (
       <p>Position: {props.ball.pos.toString()}</p>
       <p>Velocity: {props.ball.vel.toString()}</p>
       <p>Acceleration: {props.ball.acc.toString()}</p>
+      <p><em>P</em>: { props.ball.p.toString() }</p>
+      <p><em>I</em>: { props.ball.i.toString() }</p>
+      <p><em>D</em>: { props.ball.d.toString() }</p>
+      <p>Error: { props.ball.error.toString() }</p>
     </div>
 );
 
@@ -66,8 +71,14 @@ const MainComponent = props => (
       tabindex={1}
       on={{
           keydown: evt => {
-              if (evt.getRaw().keyCode === 32) {
+              switch (evt.getRaw().keyCode) {
+                  // spacebar
+              case 32:
                   props.toggleRun();
+                  break;
+                  // Left
+              default:
+                  return;
               }
           }
       }}

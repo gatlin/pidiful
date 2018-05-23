@@ -6,14 +6,6 @@
 import Vector from '../vector';
 import Ball from '../ball';
 
-export enum Direction {
-    Left,
-    Right,
-    Up,
-    Down,
-    None
-};
-
 export type State = {
     geometry: Object;
     ball: Ball;

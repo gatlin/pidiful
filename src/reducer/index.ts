@@ -4,7 +4,7 @@
  */
 
 import { Actions } from '../actions';
-import { State, Direction, window_geometry } from '../store';
+import { State, window_geometry } from '../store';
 import Vector from '../vector';
 
 function draw({ canvasCtx, canvasWidth, canvasHeight, ball }) {
@@ -26,16 +26,32 @@ const reducer = (state: State, action): State => {
             const bound_right = state.canvasWidth / 2;
 
             const gravity = new Vector(0, -980);
+            const drag_area = Math.PI * state.ball.radius * state.ball.radius;
+            const air_density = 0.75;
+            const drag = drag_area * state.ball.C_d * air_density * 0.5;
+
+            const horiz_multiplier = state.ball.vel.x === 0
+                ? 0 : state.ball.vel.x > 0
+                    ? -1
+                    : 1;
+
+            const vert_multiplier = state.ball.vel.y === 0
+                ? 0 : state.ball.vel.y > 0
+                    ? -1
+                    : 1;
+
+            const reality = gravity
+                .multiplyScalar(state.ball.mass)
+                .add(new Vector(
+                    horiz_multiplier * drag,
+                    vert_multiplier * drag));
 
             const ball = state.ball
-                .update(dt, gravity)
+                .adjust(reality)
+                .update(dt)
                 .bounds_check(state.canvasHeight, bound_right, 0, bound_left);
 
-            const acc = state.ball.acc;
-
-            if (currentTime - state.lastPushTime > 500) {
-                acc.multiplyScalar(0.75);
-            }
+            const acc = ball.acc;
 
             draw(state);
 
@@ -86,22 +102,6 @@ const reducer = (state: State, action): State => {
                 ...state,
                 ball
             };
-        }
-
-        case Actions.Push: {
-            switch (action.data) {
-                case Direction.Left:
-                    break;
-
-                case Direction.Right:
-                    break;
-
-                case Direction.Up:
-                    break;
-
-                case Direction.Down:
-                    break;
-            }
         }
 
         default:

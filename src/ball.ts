@@ -5,6 +5,9 @@ export default class Ball {
     public C_d: number;
     public i: Vector;
     public lastPos: Vector;
+    public error: Vector;
+    public p: Vector;
+    public d: Vector;
 
     constructor(
         public radius: number,
@@ -14,15 +17,20 @@ export default class Ball {
         public vel: Vector = new Vector(0, 0),
         public acc: Vector = new Vector(0, 0),
         public run: boolean = false,
-        public kP: Vector = new Vector(0.8, 0.85),
-        public kI: Vector = new Vector(0.05, 0.15),
-        public kD: Vector = new Vector(0.01, 0.05)) {
-        this.C_d = 0.27;
+        public kP: Vector = new Vector(5.0, 9.95),
+        public kI: Vector = new Vector(0.01, 1.0),
+        public kD: Vector = new Vector(0.04, 0.01),
+    ) {
+        this.C_d = 0.47;
         this.i = new Vector();
         this.lastPos = new Vector();
+        this.error = new Vector();
+
+        this.p = new Vector();
+        this.d = new Vector();
     }
 
-    public move(vec) {
+    public adjust(vec) {
         this.acc.add(vec);
         return this;
     }
@@ -47,15 +55,19 @@ export default class Ball {
         return this.activate();
     }
 
-    public update(dt: number, otherForces: Vector): this {
+    public update(dt: number): this {
         if (this.run) {
             const err_t = this.desired.clone().subtract(this.pos);
+            this.error = err_t.clone();
             const inp_t = this.pos.clone().subtract(this.lastPos);
+
+            this.p = err_t.multiply(this.kP);
             this.i.add(err_t.clone().multiplyScalar(dt).multiply(this.kI));
-            const correction = err_t
-                .multiply(this.kP)
+            this.d = inp_t.multiply(this.kD);
+
+            const correction = this.p
                 .add(this.i)
-                .subtract(inp_t.multiply(this.kD));
+                .subtract(this.d);
             this.acc.add(correction);
         }
         else {
@@ -69,32 +81,7 @@ export default class Ball {
                 .add(this.acc.clone()
                     .multiplyScalar(0.5 * dt * dt)));
 
-        const drag_area = Math.PI * this.radius * this.radius;
-        const air_density = 0.75;
-        const drag = drag_area * this.C_d * air_density * 0.5;
-
-        const horiz_multiplier = this.vel.x === 0
-            ? 0 : this.vel.x > 0
-                ? -1
-                : 1;
-
-        const vert_multiplier = this.vel.y === 0
-            ? 0 : this.vel.y > 0
-                ? -1
-                : 1;
-
-        otherForces
-            .multiplyScalar(this.mass)
-            .add(new Vector(
-                horiz_multiplier * drag,
-                vert_multiplier * drag));
-
-        const avg_acc = otherForces
-            .divideScalar(this.mass)
-            .add(this.acc.clone())
-            .divideScalar(2);
-
-        this.vel.add(avg_acc.multiplyScalar(dt));
+        this.vel.add(this.acc.multiplyScalar(dt));
 
         if (Math.abs(this.acc.x) <= 0.001) {
             this.acc.floor();

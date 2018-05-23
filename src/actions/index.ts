@@ -4,15 +4,14 @@
  * actual action creators.
  */
 
-import { Direction } from '../store';
+import Vector from '../vector';
 
 export enum Actions {
     Tick,
     CanvasUpdate,
     ToggleShowLog,
     ToggleRun,
-    SetPoint,
-    Push
+    SetPoint
 };
 
 export const tick = () => ({
@@ -34,10 +33,5 @@ export const toggleRun = () => ({
 
 export const setPoint = data => ({
     type: Actions.SetPoint,
-    data
-});
-
-export const push = data => ({
-    type: Actions.Push,
     data
 });

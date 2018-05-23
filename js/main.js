@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 4);
+/******/ 	return __webpack_require__(__webpack_require__.s = 3);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -78,7 +78,7 @@ var __assign = (this && this.__assign) || Object.assign || function(t) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var vdom_1 = __webpack_require__(5);
+var vdom_1 = __webpack_require__(4);
 function makeReducer(reducers) {
     var reducerKeys = Object.keys(reducers);
     return function (state, action) {
@@ -442,7 +442,6 @@ var Actions;
     Actions[Actions["ToggleShowLog"] = 2] = "ToggleShowLog";
     Actions[Actions["ToggleRun"] = 3] = "ToggleRun";
     Actions[Actions["SetPoint"] = 4] = "SetPoint";
-    Actions[Actions["Push"] = 5] = "Push";
 })(Actions = exports.Actions || (exports.Actions = {}));
 ;
 exports.tick = function () { return ({
@@ -462,10 +461,6 @@ exports.setPoint = function (data) { return ({
     type: Actions.SetPoint,
     data: data
 }); };
-exports.push = function (data) { return ({
-    type: Actions.Push,
-    data: data
-}); };
 
 
 /***/ }),
@@ -475,63 +470,8 @@ exports.push = function (data) { return ({
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var vector_1 = __webpack_require__(1);
-var ball_1 = __webpack_require__(6);
-var Direction;
-(function (Direction) {
-    Direction[Direction["Left"] = 0] = "Left";
-    Direction[Direction["Right"] = 1] = "Right";
-    Direction[Direction["Up"] = 2] = "Up";
-    Direction[Direction["Down"] = 3] = "Down";
-    Direction[Direction["None"] = 4] = "None";
-})(Direction = exports.Direction || (exports.Direction = {}));
-;
-function window_geometry() {
-    var winSize = Math.min(window.innerWidth, window.innerHeight - 50);
-    var viewHeight;
-    if (winSize >= 480) {
-        viewHeight = 0.75 * winSize;
-    }
-    else {
-        viewHeight = 0.95 * winSize;
-    }
-    if (viewHeight < 480) {
-        viewHeight = window.innerWidth;
-    }
-    var pixelRatio = window.devicePixelRatio || 1;
-    return {
-        viewHeight: viewHeight,
-        viewWidth: window.innerWidth,
-        pixelRation: pixelRatio
-    };
-}
-exports.window_geometry = window_geometry;
-exports.initialState = function () {
-    var geometry = window_geometry();
-    return {
-        geometry: geometry,
-        canvasCtx: null,
-        ball: new ball_1.default(20, 1.0, new vector_1.default(0, 20), new vector_1.default(0, 20)).toggleRunning(),
-        canvasWidth: geometry.viewWidth - 10,
-        canvasHeight: geometry.viewHeight,
-        lastFrameTime: Date.now(),
-        lastPushTime: 0,
-        push_force: 500,
-        show_log: true,
-        refresh_rate: 1000.0 / 60.0
-    };
-};
-
-
-/***/ }),
-/* 4 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
 var alm_1 = __webpack_require__(0);
-var store_1 = __webpack_require__(3);
+var store_1 = __webpack_require__(5);
 var actions_1 = __webpack_require__(2);
 var MainComponent_1 = __webpack_require__(7);
 var reducer_1 = __webpack_require__(13);
@@ -552,7 +492,7 @@ window.requestAnimationFrame(tock);
 
 
 /***/ }),
-/* 5 */
+/* 4 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -761,6 +701,52 @@ exports.diff_dom = diff_dom;
 
 
 /***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var vector_1 = __webpack_require__(1);
+var ball_1 = __webpack_require__(6);
+function window_geometry() {
+    var winSize = Math.min(window.innerWidth, window.innerHeight - 50);
+    var viewHeight;
+    if (winSize >= 480) {
+        viewHeight = 0.75 * winSize;
+    }
+    else {
+        viewHeight = 0.95 * winSize;
+    }
+    if (viewHeight < 480) {
+        viewHeight = window.innerWidth;
+    }
+    var pixelRatio = window.devicePixelRatio || 1;
+    return {
+        viewHeight: viewHeight,
+        viewWidth: window.innerWidth,
+        pixelRation: pixelRatio
+    };
+}
+exports.window_geometry = window_geometry;
+exports.initialState = function () {
+    var geometry = window_geometry();
+    return {
+        geometry: geometry,
+        canvasCtx: null,
+        ball: new ball_1.default(20, 1.0, new vector_1.default(0, 20), new vector_1.default(0, 20)).toggleRunning(),
+        canvasWidth: geometry.viewWidth - 10,
+        canvasHeight: geometry.viewHeight,
+        lastFrameTime: Date.now(),
+        lastPushTime: 0,
+        push_force: 500,
+        show_log: true,
+        refresh_rate: 1000.0 / 60.0
+    };
+};
+
+
+/***/ }),
 /* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -774,9 +760,9 @@ var Ball = (function () {
         if (vel === void 0) { vel = new vector_1.default(0, 0); }
         if (acc === void 0) { acc = new vector_1.default(0, 0); }
         if (run === void 0) { run = false; }
-        if (kP === void 0) { kP = new vector_1.default(0.8, 0.85); }
-        if (kI === void 0) { kI = new vector_1.default(0.05, 0.15); }
-        if (kD === void 0) { kD = new vector_1.default(0.01, 0.05); }
+        if (kP === void 0) { kP = new vector_1.default(5.0, 9.95); }
+        if (kI === void 0) { kI = new vector_1.default(0.01, 1.0); }
+        if (kD === void 0) { kD = new vector_1.default(0.04, 0.01); }
         this.radius = radius;
         this.mass = mass;
         this.pos = pos;
@@ -787,11 +773,14 @@ var Ball = (function () {
         this.kP = kP;
         this.kI = kI;
         this.kD = kD;
-        this.C_d = 0.27;
+        this.C_d = 0.47;
         this.i = new vector_1.default();
         this.lastPos = new vector_1.default();
+        this.error = new vector_1.default();
+        this.p = new vector_1.default();
+        this.d = new vector_1.default();
     }
-    Ball.prototype.move = function (vec) {
+    Ball.prototype.adjust = function (vec) {
         this.acc.add(vec);
         return this;
     };
@@ -812,15 +801,17 @@ var Ball = (function () {
         }
         return this.activate();
     };
-    Ball.prototype.update = function (dt, otherForces) {
+    Ball.prototype.update = function (dt) {
         if (this.run) {
             var err_t = this.desired.clone().subtract(this.pos);
+            this.error = err_t.clone();
             var inp_t = this.pos.clone().subtract(this.lastPos);
+            this.p = err_t.multiply(this.kP);
             this.i.add(err_t.clone().multiplyScalar(dt).multiply(this.kI));
-            var correction = err_t
-                .multiply(this.kP)
+            this.d = inp_t.multiply(this.kD);
+            var correction = this.p
                 .add(this.i)
-                .subtract(inp_t.multiply(this.kD));
+                .subtract(this.d);
             this.acc.add(correction);
         }
         else {
@@ -831,25 +822,7 @@ var Ball = (function () {
             .multiplyScalar(dt)
             .add(this.acc.clone()
             .multiplyScalar(0.5 * dt * dt)));
-        var drag_area = Math.PI * this.radius * this.radius;
-        var air_density = 0.75;
-        var drag = drag_area * this.C_d * air_density * 0.5;
-        var horiz_multiplier = this.vel.x === 0
-            ? 0 : this.vel.x > 0
-            ? -1
-            : 1;
-        var vert_multiplier = this.vel.y === 0
-            ? 0 : this.vel.y > 0
-            ? -1
-            : 1;
-        otherForces
-            .multiplyScalar(this.mass)
-            .add(new vector_1.default(horiz_multiplier * drag, vert_multiplier * drag));
-        var avg_acc = otherForces
-            .divideScalar(this.mass)
-            .add(this.acc.clone())
-            .divideScalar(2);
-        this.vel.add(avg_acc.multiplyScalar(dt));
+        this.vel.add(this.acc.multiplyScalar(dt));
         if (Math.abs(this.acc.x) <= 0.001) {
             this.acc.floor();
         }
@@ -935,11 +908,30 @@ var LogBar = function (props) { return !props.show ? Alm.el("span", null) : (Alm
         props.ball.vel.toString()),
     Alm.el("p", null,
         "Acceleration: ",
-        props.ball.acc.toString()))); };
+        props.ball.acc.toString()),
+    Alm.el("p", null,
+        Alm.el("em", null, "P"),
+        ": ",
+        props.ball.p.toString()),
+    Alm.el("p", null,
+        Alm.el("em", null, "I"),
+        ": ",
+        props.ball.i.toString()),
+    Alm.el("p", null,
+        Alm.el("em", null, "D"),
+        ": ",
+        props.ball.d.toString()),
+    Alm.el("p", null,
+        "Error: ",
+        props.ball.error.toString()))); };
 var MainComponent = function (props) { return (Alm.el("section", { id: "the_app", className: "app", tabindex: 1, on: {
         keydown: function (evt) {
-            if (evt.getRaw().keyCode === 32) {
-                props.toggleRun();
+            switch (evt.getRaw().keyCode) {
+                case 32:
+                    props.toggleRun();
+                    break;
+                default:
+                    return;
             }
         }
     } },
@@ -1579,7 +1571,6 @@ var __assign = (this && this.__assign) || Object.assign || function(t) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var actions_1 = __webpack_require__(2);
-var store_1 = __webpack_require__(3);
 var vector_1 = __webpack_require__(1);
 function draw(_a) {
     var canvasCtx = _a.canvasCtx, canvasWidth = _a.canvasWidth, canvasHeight = _a.canvasHeight, ball = _a.ball;
@@ -1597,13 +1588,25 @@ var reducer = function (state, action) {
             var bound_left = -1 * (state.canvasWidth / 2);
             var bound_right = state.canvasWidth / 2;
             var gravity = new vector_1.default(0, -980);
+            var drag_area = Math.PI * state.ball.radius * state.ball.radius;
+            var air_density = 0.75;
+            var drag = drag_area * state.ball.C_d * air_density * 0.5;
+            var horiz_multiplier = state.ball.vel.x === 0
+                ? 0 : state.ball.vel.x > 0
+                ? -1
+                : 1;
+            var vert_multiplier = state.ball.vel.y === 0
+                ? 0 : state.ball.vel.y > 0
+                ? -1
+                : 1;
+            var reality = gravity
+                .multiplyScalar(state.ball.mass)
+                .add(new vector_1.default(horiz_multiplier * drag, vert_multiplier * drag));
             var ball = state.ball
-                .update(dt, gravity)
+                .adjust(reality)
+                .update(dt)
                 .bounds_check(state.canvasHeight, bound_right, 0, bound_left);
-            var acc = state.ball.acc;
-            if (currentTime - state.lastPushTime > 500) {
-                acc.multiplyScalar(0.75);
-            }
+            var acc = ball.acc;
             draw(state);
             return __assign({}, state, { lastFrameTime: currentTime, ball: ball });
         }
@@ -1630,18 +1633,6 @@ var reducer = function (state, action) {
             var yCoord = evt.clientY - rect.top;
             ball.desired = new vector_1.default(xCoord - (state.canvasWidth / 2), state.canvasHeight - yCoord);
             return __assign({}, state, { ball: ball });
-        }
-        case actions_1.Actions.Push: {
-            switch (action.data) {
-                case store_1.Direction.Left:
-                    break;
-                case store_1.Direction.Right:
-                    break;
-                case store_1.Direction.Up:
-                    break;
-                case store_1.Direction.Down:
-                    break;
-            }
         }
         default:
             return state;
