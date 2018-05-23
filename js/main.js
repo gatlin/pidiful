@@ -1687,7 +1687,6 @@ var reducer = function (state, action) {
             var x = (evt.clientX - rect.left) - (state.canvasWidth / 2);
             var y = state.canvasHeight - (evt.clientY - rect.top);
             ball.vel = new physics_1.Vector((ball.pos.x - x) / 10, (ball.pos.y - y) / 10);
-            console.log('having a normal one');
             return __assign({}, state, { ball: ball });
         }
         default:

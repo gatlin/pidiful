@@ -77,8 +77,6 @@ const reducer = (state: State, action): State => {
                 (ball.pos.y - y) / 10
             );
 
-            console.log('having a normal one');
-
             return {
                 ...state,
                 ball
