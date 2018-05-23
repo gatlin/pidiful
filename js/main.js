@@ -746,7 +746,7 @@ exports.initialState = function () {
     return {
         geometry: geometry,
         canvasCtx: null,
-        ball: new physics_1.Ball(20 * geometry.pixelRatio, 1.0, new physics_1.Vector(0, 500)),
+        ball: new physics_1.Ball(20 / geometry.pixelRatio, 1.0, new physics_1.Vector(0, 500)),
         canvasWidth: geometry.viewWidth - 10,
         canvasHeight: geometry.viewHeight,
         lastFrameTime: Date.now(),
