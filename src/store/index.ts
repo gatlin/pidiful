@@ -47,7 +47,7 @@ export const initialState = () => {
         canvasCtx: null,
         ball: new Ball(
             20 * geometry.pixelRatio,
-            0.1,
+            1.0,
             new Vector(0, 500)),
         canvasWidth: geometry.viewWidth - 10,
         canvasHeight: geometry.viewHeight,

@@ -10,7 +10,8 @@ export enum Actions {
     Tick,
     CanvasUpdate,
     ToggleShowLog,
-    ToggleRun
+    ToggleRun,
+    Sling
 };
 
 export const tick = () => ({
@@ -28,4 +29,9 @@ export const toggleShowLog = () => ({
 
 export const toggleRun = () => ({
     type: Actions.ToggleRun
+});
+
+export const sling = data => ({
+    type: Actions.Sling,
+    data
 });

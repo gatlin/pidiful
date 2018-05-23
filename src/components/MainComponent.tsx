@@ -3,7 +3,8 @@ import { connect } from 'alm';
 import {
     toggleRun,
     toggleShowLog,
-    canvasUpdate
+    canvasUpdate,
+    sling
 } from '../actions';
 import './MainComponent.css';
 import { Vector } from '../physics';
@@ -88,6 +89,11 @@ const MainComponent = props => (
         id='the_canvas'
         height={props.canvasHeight}
         width={props.canvasWidth}
+        on={{
+            click: evt => {
+                props.sling(evt.getRaw());
+            }
+        }}
         ref={ cnvs => {
             props.canvasUpdate(cnvs);
         }}
@@ -113,6 +119,7 @@ export default connect(
     dispatch => ({
         toggleShowLog: () => dispatch(toggleShowLog()),
         toggleRun: () => dispatch(toggleRun()),
-        canvasUpdate: d => dispatch(canvasUpdate(d))
+        canvasUpdate: d => dispatch(canvasUpdate(d)),
+        sling: d => dispatch(sling(d))
     })
 )(MainComponent);

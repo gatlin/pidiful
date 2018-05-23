@@ -25,9 +25,9 @@ export class Ball extends Thing {
         mass: number,
         pos: Vector,
         error: Vector = new Vector(0, 0),
-        vel: Vector = new Vector(5, 0),
-        acc: Vector = new Vector(2.0, 0),
-        run: boolean = false,
+        vel: Vector = new Vector(7, 0),
+        acc: Vector = new Vector(0, 0),
+        run: boolean = true,
         kP: Vector = new Vector(1.0, 7.25),
         kI: Vector = new Vector(0, 0),
         kD: Vector = new Vector(0, 0),
@@ -42,8 +42,8 @@ export class Ball extends Thing {
         this.kP = kP;
         this.kI = kI;
         this.kD = kD;
-        this.estimated_pos = new Vector();
-        this.estimated_vel = new Vector();
+        this.estimated_pos = this.pos.clone();
+        this.estimated_vel = this.vel.clone();
         this.error = error;
     }
 
@@ -77,6 +77,15 @@ export class Ball extends Thing {
         const drag_area = Math.PI * this.radius * this.radius / (10000);
         const drag_scalar = drag_area * this.C_d * air_density * 0.5;
 
+        let x = (this.vel.x * this.vel.x) / Math.abs(this.vel.x);
+        let y = (this.vel.y * this.vel.y) / Math.abs(this.vel.y);
+
+        if (isNaN(x)) {
+            x = 0;
+        }
+        if (isNaN(y)) {
+            y = 0;
+        }
         const horiz_multiplier = this.vel.x === 0
             ? 0 : this.vel.x > 0
                 ? -1
@@ -87,19 +96,11 @@ export class Ball extends Thing {
                 ? -1
                 : 1;
 
-        let x = (this.vel.x * this.vel.x) / Math.abs(this.vel.x);
-        let y = (this.vel.y * this.vel.y) / Math.abs(this.vel.y);
-
-        if (isNaN(x)) {
-            x = 0;
-        }
-        if (isNaN(y)) {
-            y = 0;
-        }
         const drag = new Vector(
             horiz_multiplier * drag_scalar * x,
             vert_multiplier * drag_scalar * y
         );
+
         return drag;
     }
 
@@ -116,6 +117,9 @@ export class Ball extends Thing {
         // Using acceleration we will compute how far we actually traveled, and
         // update the error accordingly.
 
+        const acc = this.acc.clone();
+        this.estimated_vel.add(acc.clone().multiplyScalar(dt));
+        this.estimated_pos.add(acc.clone().multiplyScalar(dt * 100));
         return this;
     }
 
@@ -127,12 +131,13 @@ export class Ball extends Thing {
         }
 
         if (this.pos.x + this.radius > r) {
-            this.pos.x = r - this.radius - 1;
+            this.pos.x = r - this.radius;
             this.vel.x *= -0.7;
         }
 
         if (this.pos.y <= b) {
             this.vel.y *= -0.7;
+            this.vel.x *= 0.99;
             this.pos.y = b;
         }
 

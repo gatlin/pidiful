@@ -62,6 +62,29 @@ const reducer = (state: State, action): State => {
             };
         }
 
+        case Actions.Sling: {
+            const ball = state.ball;
+            const evt = action.data;
+            const rect = evt
+                .target
+                .getBoundingClientRect();
+
+            const x = (evt.clientX - rect.left) - (state.canvasWidth / 2);
+            const y = state.canvasHeight - (evt.clientY - rect.top);
+
+            ball.vel = new Vector(
+                (ball.pos.x - x) / 10,
+                (ball.pos.y - y) / 10
+            );
+
+            console.log('having a normal one');
+
+            return {
+                ...state,
+                ball
+            };
+        }
+
         default:
             return state;
     }

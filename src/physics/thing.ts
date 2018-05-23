@@ -27,9 +27,11 @@ export abstract class Thing {
     public step(dt: number, otherForces: Vector = new Vector()): this {
         const drag = this.drag_force().divideScalar(this.mass);
         const gravity = new Vector(0, -9.81);
-        this.acc = drag.add(gravity).clone();
         this.vel.add(this.acc.clone().multiplyScalar(dt));
         this.pos.add(this.vel.clone().multiplyScalar(dt * 100));
+        this.acc
+            .add(drag.add(gravity).clone())
+            .divideScalar(2);
         return this;
     }
 

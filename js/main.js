@@ -441,6 +441,7 @@ var Actions;
     Actions[Actions["CanvasUpdate"] = 1] = "CanvasUpdate";
     Actions[Actions["ToggleShowLog"] = 2] = "ToggleShowLog";
     Actions[Actions["ToggleRun"] = 3] = "ToggleRun";
+    Actions[Actions["Sling"] = 4] = "Sling";
 })(Actions = exports.Actions || (exports.Actions = {}));
 ;
 exports.tick = function () { return ({
@@ -455,6 +456,10 @@ exports.toggleShowLog = function () { return ({
 }); };
 exports.toggleRun = function () { return ({
     type: Actions.ToggleRun
+}); };
+exports.sling = function (data) { return ({
+    type: Actions.Sling,
+    data: data
 }); };
 
 
@@ -728,7 +733,7 @@ exports.initialState = function () {
     return {
         geometry: geometry,
         canvasCtx: null,
-        ball: new physics_1.Ball(20 * geometry.pixelRatio, 0.1, new physics_1.Vector(0, 500)),
+        ball: new physics_1.Ball(20 * geometry.pixelRatio, 1.0, new physics_1.Vector(0, 500)),
         canvasWidth: geometry.viewWidth - 10,
         canvasHeight: geometry.viewHeight,
         lastFrameTime: Date.now(),
@@ -777,9 +782,9 @@ var Ball = (function (_super) {
     __extends(Ball, _super);
     function Ball(radius, mass, pos, error, vel, acc, run, kP, kI, kD) {
         if (error === void 0) { error = new vector_1.Vector(0, 0); }
-        if (vel === void 0) { vel = new vector_1.Vector(5, 0); }
-        if (acc === void 0) { acc = new vector_1.Vector(2.0, 0); }
-        if (run === void 0) { run = false; }
+        if (vel === void 0) { vel = new vector_1.Vector(7, 0); }
+        if (acc === void 0) { acc = new vector_1.Vector(0, 0); }
+        if (run === void 0) { run = true; }
         if (kP === void 0) { kP = new vector_1.Vector(1.0, 7.25); }
         if (kI === void 0) { kI = new vector_1.Vector(0, 0); }
         if (kD === void 0) { kD = new vector_1.Vector(0, 0); }
@@ -793,8 +798,8 @@ var Ball = (function (_super) {
         _this.kP = kP;
         _this.kI = kI;
         _this.kD = kD;
-        _this.estimated_pos = new vector_1.Vector();
-        _this.estimated_vel = new vector_1.Vector();
+        _this.estimated_pos = _this.pos.clone();
+        _this.estimated_vel = _this.vel.clone();
         _this.error = error;
         return _this;
     }
@@ -824,14 +829,6 @@ var Ball = (function (_super) {
     Ball.prototype.drag_force = function () {
         var drag_area = Math.PI * this.radius * this.radius / (10000);
         var drag_scalar = drag_area * this.C_d * constants_1.air_density * 0.5;
-        var horiz_multiplier = this.vel.x === 0
-            ? 0 : this.vel.x > 0
-            ? -1
-            : 1;
-        var vert_multiplier = this.vel.y === 0
-            ? 0 : this.vel.y > 0
-            ? -1
-            : 1;
         var x = (this.vel.x * this.vel.x) / Math.abs(this.vel.x);
         var y = (this.vel.y * this.vel.y) / Math.abs(this.vel.y);
         if (isNaN(x)) {
@@ -840,6 +837,14 @@ var Ball = (function (_super) {
         if (isNaN(y)) {
             y = 0;
         }
+        var horiz_multiplier = this.vel.x === 0
+            ? 0 : this.vel.x > 0
+            ? -1
+            : 1;
+        var vert_multiplier = this.vel.y === 0
+            ? 0 : this.vel.y > 0
+            ? -1
+            : 1;
         var drag = new vector_1.Vector(horiz_multiplier * drag_scalar * x, vert_multiplier * drag_scalar * y);
         return drag;
     };
@@ -847,6 +852,9 @@ var Ball = (function (_super) {
         if (!this.run) {
             return this;
         }
+        var acc = this.acc.clone();
+        this.estimated_vel.add(acc.clone().multiplyScalar(dt));
+        this.estimated_pos.add(acc.clone().multiplyScalar(dt * 100));
         return this;
     };
     Ball.prototype.bounds_check = function (t, r, b, l) {
@@ -855,11 +863,12 @@ var Ball = (function (_super) {
             this.vel.y *= -0.5;
         }
         if (this.pos.x + this.radius > r) {
-            this.pos.x = r - this.radius - 1;
+            this.pos.x = r - this.radius;
             this.vel.x *= -0.7;
         }
         if (this.pos.y <= b) {
             this.vel.y *= -0.7;
+            this.vel.x *= 0.99;
             this.pos.y = b;
         }
         if (this.pos.x - this.radius < l) {
@@ -903,9 +912,11 @@ var Thing = (function () {
         if (otherForces === void 0) { otherForces = new vector_1.Vector(); }
         var drag = this.drag_force().divideScalar(this.mass);
         var gravity = new vector_1.Vector(0, -9.81);
-        this.acc = drag.add(gravity).clone();
         this.vel.add(this.acc.clone().multiplyScalar(dt));
         this.pos.add(this.vel.clone().multiplyScalar(dt * 100));
+        this.acc
+            .add(drag.add(gravity).clone())
+            .divideScalar(2);
         return this;
     };
     return Thing;
@@ -995,7 +1006,11 @@ var MainComponent = function (props) { return (Alm.el("section", { id: "the_app"
             }
         }
     } },
-    Alm.el("canvas", { id: 'the_canvas', height: props.canvasHeight, width: props.canvasWidth, ref: function (cnvs) {
+    Alm.el("canvas", { id: 'the_canvas', height: props.canvasHeight, width: props.canvasWidth, on: {
+            click: function (evt) {
+                props.sling(evt.getRaw());
+            }
+        }, ref: function (cnvs) {
             props.canvasUpdate(cnvs);
         } }),
     Alm.el(RunCtrl, { run: props.ball.run, toggleRun: props.toggleRun }),
@@ -1012,7 +1027,8 @@ exports.default = alm_1.connect(function (_a) {
 }, function (dispatch) { return ({
     toggleShowLog: function () { return dispatch(actions_1.toggleShowLog()); },
     toggleRun: function () { return dispatch(actions_1.toggleRun()); },
-    canvasUpdate: function (d) { return dispatch(actions_1.canvasUpdate(d)); }
+    canvasUpdate: function (d) { return dispatch(actions_1.canvasUpdate(d)); },
+    sling: function (d) { return dispatch(actions_1.sling(d)); }
 }); })(MainComponent);
 
 
@@ -1626,6 +1642,7 @@ var __assign = (this && this.__assign) || Object.assign || function(t) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var actions_1 = __webpack_require__(2);
+var physics_1 = __webpack_require__(6);
 function draw(_a) {
     var canvasCtx = _a.canvasCtx, canvasWidth = _a.canvasWidth, canvasHeight = _a.canvasHeight, ball = _a.ball;
     canvasCtx.clearRect(0, 0, canvasWidth, canvasHeight);
@@ -1659,6 +1676,18 @@ var reducer = function (state, action) {
         case actions_1.Actions.ToggleRun: {
             var ball = state.ball;
             ball.toggleRunning();
+            return __assign({}, state, { ball: ball });
+        }
+        case actions_1.Actions.Sling: {
+            var ball = state.ball;
+            var evt = action.data;
+            var rect = evt
+                .target
+                .getBoundingClientRect();
+            var x = (evt.clientX - rect.left) - (state.canvasWidth / 2);
+            var y = state.canvasHeight - (evt.clientY - rect.top);
+            ball.vel = new physics_1.Vector((ball.pos.x - x) / 10, (ball.pos.y - y) / 10);
+            console.log('having a normal one');
             return __assign({}, state, { ball: ball });
         }
         default:
