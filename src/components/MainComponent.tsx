@@ -3,11 +3,10 @@ import { connect } from 'alm';
 import {
     toggleRun,
     toggleShowLog,
-    setPoint,
     canvasUpdate
 } from '../actions';
 import './MainComponent.css';
-import Vector from '../vector';
+import { Vector } from '../physics';
 
 let shownCount = 0;
 
@@ -57,6 +56,8 @@ const LogBar = props => !props.show ? <span></span> : (
       <p><em>P</em>: { props.ball.p.toString() }</p>
       <p><em>I</em>: { props.ball.i.toString() }</p>
       <p><em>D</em>: { props.ball.d.toString() }</p>
+      <p>Estimated position: { props.ball.estimated_pos.toString() }</p>
+      <p>Estimated velocity: { props.ball.estimated_vel.toString() }</p>
       <p>Error: { props.ball.error.toString() }</p>
     </div>
 );
@@ -87,11 +88,6 @@ const MainComponent = props => (
         id='the_canvas'
         height={props.canvasHeight}
         width={props.canvasWidth}
-        on={{
-            click: evt => {
-                props.setPoint(evt.getRaw());
-            }
-        }}
         ref={ cnvs => {
             props.canvasUpdate(cnvs);
         }}
@@ -117,7 +113,6 @@ export default connect(
     dispatch => ({
         toggleShowLog: () => dispatch(toggleShowLog()),
         toggleRun: () => dispatch(toggleRun()),
-        setPoint: d => dispatch(setPoint(d)),
         canvasUpdate: d => dispatch(canvasUpdate(d))
     })
 )(MainComponent);

@@ -4,14 +4,13 @@
  * actual action creators.
  */
 
-import Vector from '../vector';
+import { Vector } from '../physics';
 
 export enum Actions {
     Tick,
     CanvasUpdate,
     ToggleShowLog,
-    ToggleRun,
-    SetPoint
+    ToggleRun
 };
 
 export const tick = () => ({
@@ -29,9 +28,4 @@ export const toggleShowLog = () => ({
 
 export const toggleRun = () => ({
     type: Actions.ToggleRun
-});
-
-export const setPoint = data => ({
-    type: Actions.SetPoint,
-    data
 });

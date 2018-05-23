@@ -5,7 +5,7 @@
 
 import { Actions } from '../actions';
 import { State, window_geometry } from '../store';
-import Vector from '../vector';
+import { Vector } from '../physics';
 
 function draw({ canvasCtx, canvasWidth, canvasHeight, ball }) {
     canvasCtx.clearRect(0, 0, canvasWidth, canvasHeight);
@@ -26,7 +26,7 @@ const reducer = (state: State, action): State => {
             const bound_right = state.canvasWidth / 2;
 
             const ball = state.ball
-                .update(dt)
+                .step(dt)
                 .pid(dt)
                 .bounds_check(state.canvasHeight, bound_right, 0, bound_left);
 
@@ -54,29 +54,8 @@ const reducer = (state: State, action): State => {
             return { ...state, show_log: !state.show_log };
 
         case Actions.ToggleRun: {
-            const ball = state.ball;
+            let { ball } = state;
             ball.toggleRunning();
-            return state;
-        }
-
-
-        case Actions.SetPoint: {
-            const ball = state.ball;
-            if (!ball.run) {
-                return { ...state };
-            }
-
-            const evt = action.data;
-            const rect = evt.target.getBoundingClientRect();
-
-            const xCoord = evt.clientX - rect.left;
-            const yCoord = evt.clientY - rect.top;
-
-            ball.desired = new Vector(
-                xCoord - (state.canvasWidth / 2),
-                state.canvasHeight - yCoord
-            );
-
             return {
                 ...state,
                 ball

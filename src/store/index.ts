@@ -3,8 +3,7 @@
  * The state types as well as the initial application state.
  */
 
-import Vector from '../vector';
-import Ball from '../ball';
+import { Vector, Ball } from '../physics';
 
 export type State = {
     geometry: Object;
@@ -35,9 +34,9 @@ export function window_geometry() {
     const pixelRatio = window.devicePixelRatio || 1;
 
     return {
-        viewHeight: viewHeight,
+        viewHeight,
         viewWidth: window.innerWidth,
-        pixelRation: pixelRatio
+        pixelRatio
     };
 }
 
@@ -47,10 +46,9 @@ export const initialState = () => {
         geometry,
         canvasCtx: null,
         ball: new Ball(
-            20,
-            1.0,
-            new Vector(0, 20),
-            new Vector(0, 20)).toggleRunning(),
+            20 * geometry.pixelRatio,
+            0.1,
+            new Vector(0, 500)),
         canvasWidth: geometry.viewWidth - 10,
         canvasHeight: geometry.viewHeight,
         lastFrameTime: Date.now(),
