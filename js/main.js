@@ -743,10 +743,15 @@ function window_geometry() {
 exports.window_geometry = window_geometry;
 exports.initialState = function () {
     var geometry = window_geometry();
+    console.log;
+    var radius = geometry.viewHeight / 20.0 / geometry.pixelRatio;
+    if (radius < 20) {
+        radius = 20;
+    }
     return {
         geometry: geometry,
         canvasCtx: null,
-        ball: new physics_1.Ball(20 / geometry.pixelRatio, 1.0, new physics_1.Vector(0, 0)),
+        ball: new physics_1.Ball(radius, 1.0, new physics_1.Vector(0, 0)),
         canvasWidth: geometry.viewWidth - 10,
         canvasHeight: geometry.viewHeight,
         lastFrameTime: Date.now(),

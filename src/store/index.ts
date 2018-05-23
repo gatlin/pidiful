@@ -42,11 +42,16 @@ export function window_geometry() {
 
 export const initialState = () => {
     const geometry = window_geometry();
+    console.log
+    let radius = geometry.viewHeight / 20.0 / geometry.pixelRatio;
+    if (radius < 20) {
+        radius = 20;
+    }
     return {
         geometry,
         canvasCtx: null,
         ball: new Ball(
-            20 / geometry.pixelRatio,
+            radius,
             1.0,
             new Vector(0, 0)),
         canvasWidth: geometry.viewWidth - 10,
