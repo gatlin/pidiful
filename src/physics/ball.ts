@@ -11,26 +11,26 @@ export class Ball extends Thing {
     public i: Vector;
     public p: Vector;
     public d: Vector;
-    public error: Vector;
     public kP: Vector;
     public kI: Vector;
     public kD: Vector;
     public radius: number;
     public run: boolean;
-    public estimated_pos: Vector;
-    public estimated_vel: Vector;
+    public error: Vector;
+    public runtime: number;
+    public thrust: number;
+    public previous_acc: Vector;
 
     constructor(
         radius: number,
         mass: number,
         pos: Vector,
-        error: Vector = new Vector(0, 0),
         vel: Vector = new Vector(0, 0),
         acc: Vector = new Vector(0, 0),
-        run: boolean = true,
-        kP: Vector = new Vector(1.0, 7.25),
+        run: boolean = false,
+        kP: Vector = new Vector(1.0, 1.0),
         kI: Vector = new Vector(0, 0),
-        kD: Vector = new Vector(0, 0),
+        kD: Vector = new Vector(0, 0.01),
     ) {
         super(mass, pos, vel, acc);
         this.C_d = 0.47;
@@ -42,27 +42,28 @@ export class Ball extends Thing {
         this.kP = kP;
         this.kI = kI;
         this.kD = kD;
-        this.estimated_pos = this.pos.clone();
-        this.estimated_vel = this.vel.clone();
-        this.error = error;
+        this.error = new Vector();
+        this.runtime = 0;
+        this.thrust = 10.0;
+        this.previous_acc = new Vector();
     }
 
     public activate() {
         this.run = true;
-        this.estimated_pos = new Vector();
         this.i = new Vector();
-        this.error.add(new Vector(0, 100));
+        this.previous_acc = this.acc.clone();
+        const thrust = new Vector(0, 0.1);
+
         return this;
     }
 
     public deactivate() {
         this.run = false;
-        this.error = new Vector();
         this.p = new Vector();
         this.i = new Vector();
         this.d = new Vector();
-        this.estimated_pos = new Vector();
-        this.estimated_vel = new Vector();
+        this.error = new Vector();
+        this.runtime = 0;
         return this;
     }
 
@@ -117,9 +118,6 @@ export class Ball extends Thing {
         // Using acceleration we will compute how far we actually traveled, and
         // update the error accordingly.
 
-        const acc = this.acc.clone();
-        this.estimated_vel.add(acc.clone().multiplyScalar(dt));
-        this.estimated_pos.add(acc.clone().multiplyScalar(dt * 100));
         return this;
     }
 
@@ -150,7 +148,6 @@ export class Ball extends Thing {
     }
 
     public draw(ctx, cW, cH) {
-        const desired = this.pos.clone().add(this.error);
         ctx.beginPath();
         ctx.lineWidth = 7;
         ctx.strokeStyle = '#325FA2';

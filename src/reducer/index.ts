@@ -4,7 +4,7 @@
  */
 
 import { Actions } from '../actions';
-import { State, window_geometry } from '../store';
+import { State, window_geometry, Direction } from '../store';
 import { Vector } from '../physics';
 
 function draw({ canvasCtx, canvasWidth, canvasHeight, ball }) {
@@ -62,25 +62,29 @@ const reducer = (state: State, action): State => {
             };
         }
 
-        case Actions.Sling: {
-            const ball = state.ball;
-            const evt = action.data;
-            const rect = evt
-                .target
-                .getBoundingClientRect();
+        case Actions.Throttle: {
+            const { ball } = state;
+            if (!ball.run) {
+                return state;
+            }
+            switch (action.data) {
+                case Direction.Left:
+                    ball.acc.subtract(new Vector(ball.thrust, 0));
+                    break;
 
-            const x = (evt.clientX - rect.left) - (state.canvasWidth / 2);
-            const y = state.canvasHeight - (evt.clientY - rect.top);
+                case Direction.Right:
+                    ball.acc.add(new Vector(ball.thrust, 0));
+                    break;
 
-            ball.vel = new Vector(
-                (ball.pos.x - x) / 10,
-                (ball.pos.y - y) / 10
-            );
+                case Direction.Up:
+                    ball.acc.add(new Vector(0, ball.thrust * 10));
+                    break;
 
-            return {
-                ...state,
-                ball
-            };
+                case Direction.Down:
+                    ball.acc.subtract(new Vector(0, ball.thrust));
+                    break;
+            }
+            return state;
         }
 
         default:

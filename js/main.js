@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 4);
+/******/ 	return __webpack_require__(__webpack_require__.s = 5);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -78,7 +78,7 @@ var __assign = (this && this.__assign) || Object.assign || function(t) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var vdom_1 = __webpack_require__(5);
+var vdom_1 = __webpack_require__(6);
 function makeReducer(reducers) {
     var reducerKeys = Object.keys(reducers);
     return function (state, action) {
@@ -327,6 +327,64 @@ exports.connect = connect;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
+var physics_1 = __webpack_require__(4);
+var Direction;
+(function (Direction) {
+    Direction[Direction["Left"] = 0] = "Left";
+    Direction[Direction["Right"] = 1] = "Right";
+    Direction[Direction["Up"] = 2] = "Up";
+    Direction[Direction["Down"] = 3] = "Down";
+})(Direction = exports.Direction || (exports.Direction = {}));
+;
+function window_geometry() {
+    var winSize = Math.min(window.innerWidth, window.innerHeight - 50);
+    var viewHeight;
+    if (winSize >= 480) {
+        viewHeight = 0.75 * winSize;
+    }
+    else {
+        viewHeight = 0.95 * winSize;
+    }
+    if (viewHeight < 480) {
+        viewHeight = window.innerWidth;
+    }
+    var pixelRatio = window.devicePixelRatio || 1;
+    return {
+        viewHeight: viewHeight,
+        viewWidth: window.innerWidth,
+        pixelRatio: pixelRatio
+    };
+}
+exports.window_geometry = window_geometry;
+exports.initialState = function () {
+    var geometry = window_geometry();
+    console.log;
+    var radius = geometry.viewHeight / 20.0 / geometry.pixelRatio;
+    if (radius < 20) {
+        radius = 20;
+    }
+    return {
+        geometry: geometry,
+        canvasCtx: null,
+        ball: new physics_1.Ball(radius, 1.0, new physics_1.Vector(0, 0)),
+        canvasWidth: geometry.viewWidth - 10,
+        canvasHeight: geometry.viewHeight,
+        lastFrameTime: Date.now(),
+        lastPushTime: 0,
+        push_force: 500,
+        show_log: true,
+        refresh_rate: 1000.0 / 60.0
+    };
+};
+
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
 var Vector = (function () {
     function Vector(x, y) {
         if (x === void 0) { x = 0; }
@@ -429,7 +487,7 @@ exports.Vector = Vector;
 
 
 /***/ }),
-/* 2 */
+/* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -441,7 +499,7 @@ var Actions;
     Actions[Actions["CanvasUpdate"] = 1] = "CanvasUpdate";
     Actions[Actions["ToggleShowLog"] = 2] = "ToggleShowLog";
     Actions[Actions["ToggleRun"] = 3] = "ToggleRun";
-    Actions[Actions["Sling"] = 4] = "Sling";
+    Actions[Actions["Throttle"] = 4] = "Throttle";
 })(Actions = exports.Actions || (exports.Actions = {}));
 ;
 exports.tick = function () { return ({
@@ -457,23 +515,10 @@ exports.toggleShowLog = function () { return ({
 exports.toggleRun = function () { return ({
     type: Actions.ToggleRun
 }); };
-exports.sling = function (data) { return ({
-    type: Actions.Sling,
+exports.throttle = function (data) { return ({
+    type: Actions.Throttle,
     data: data
 }); };
-
-
-/***/ }),
-/* 3 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var ball_1 = __webpack_require__(7);
-exports.Ball = ball_1.Ball;
-var vector_1 = __webpack_require__(1);
-exports.Vector = vector_1.Vector;
 
 
 /***/ }),
@@ -483,9 +528,22 @@ exports.Vector = vector_1.Vector;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
+var ball_1 = __webpack_require__(7);
+exports.Ball = ball_1.Ball;
+var vector_1 = __webpack_require__(2);
+exports.Vector = vector_1.Vector;
+
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
 var alm_1 = __webpack_require__(0);
-var store_1 = __webpack_require__(6);
-var actions_1 = __webpack_require__(2);
+var store_1 = __webpack_require__(1);
+var actions_1 = __webpack_require__(3);
 var MainComponent_1 = __webpack_require__(10);
 var reducer_1 = __webpack_require__(16);
 var app = new alm_1.Alm({
@@ -505,7 +563,7 @@ window.requestAnimationFrame(tock);
 
 
 /***/ }),
-/* 5 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -714,56 +772,6 @@ exports.diff_dom = diff_dom;
 
 
 /***/ }),
-/* 6 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var physics_1 = __webpack_require__(3);
-function window_geometry() {
-    var winSize = Math.min(window.innerWidth, window.innerHeight - 50);
-    var viewHeight;
-    if (winSize >= 480) {
-        viewHeight = 0.75 * winSize;
-    }
-    else {
-        viewHeight = 0.95 * winSize;
-    }
-    if (viewHeight < 480) {
-        viewHeight = window.innerWidth;
-    }
-    var pixelRatio = window.devicePixelRatio || 1;
-    return {
-        viewHeight: viewHeight,
-        viewWidth: window.innerWidth,
-        pixelRatio: pixelRatio
-    };
-}
-exports.window_geometry = window_geometry;
-exports.initialState = function () {
-    var geometry = window_geometry();
-    console.log;
-    var radius = geometry.viewHeight / 20.0 / geometry.pixelRatio;
-    if (radius < 20) {
-        radius = 20;
-    }
-    return {
-        geometry: geometry,
-        canvasCtx: null,
-        ball: new physics_1.Ball(radius, 1.0, new physics_1.Vector(0, 0)),
-        canvasWidth: geometry.viewWidth - 10,
-        canvasHeight: geometry.viewHeight,
-        lastFrameTime: Date.now(),
-        lastPushTime: 0,
-        push_force: 500,
-        show_log: true,
-        refresh_rate: 1000.0 / 60.0
-    };
-};
-
-
-/***/ }),
 /* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -780,19 +788,18 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var vector_1 = __webpack_require__(1);
+var vector_1 = __webpack_require__(2);
 var thing_1 = __webpack_require__(8);
 var constants_1 = __webpack_require__(9);
 var Ball = (function (_super) {
     __extends(Ball, _super);
-    function Ball(radius, mass, pos, error, vel, acc, run, kP, kI, kD) {
-        if (error === void 0) { error = new vector_1.Vector(0, 0); }
+    function Ball(radius, mass, pos, vel, acc, run, kP, kI, kD) {
         if (vel === void 0) { vel = new vector_1.Vector(0, 0); }
         if (acc === void 0) { acc = new vector_1.Vector(0, 0); }
-        if (run === void 0) { run = true; }
-        if (kP === void 0) { kP = new vector_1.Vector(1.0, 7.25); }
+        if (run === void 0) { run = false; }
+        if (kP === void 0) { kP = new vector_1.Vector(1.0, 1.0); }
         if (kI === void 0) { kI = new vector_1.Vector(0, 0); }
-        if (kD === void 0) { kD = new vector_1.Vector(0, 0); }
+        if (kD === void 0) { kD = new vector_1.Vector(0, 0.01); }
         var _this = _super.call(this, mass, pos, vel, acc) || this;
         _this.C_d = 0.47;
         _this.radius = radius;
@@ -803,26 +810,26 @@ var Ball = (function (_super) {
         _this.kP = kP;
         _this.kI = kI;
         _this.kD = kD;
-        _this.estimated_pos = _this.pos.clone();
-        _this.estimated_vel = _this.vel.clone();
-        _this.error = error;
+        _this.error = new vector_1.Vector();
+        _this.runtime = 0;
+        _this.thrust = 10.0;
+        _this.previous_acc = new vector_1.Vector();
         return _this;
     }
     Ball.prototype.activate = function () {
         this.run = true;
-        this.estimated_pos = new vector_1.Vector();
         this.i = new vector_1.Vector();
-        this.error.add(new vector_1.Vector(0, 100));
+        this.previous_acc = this.acc.clone();
+        var thrust = new vector_1.Vector(0, 0.1);
         return this;
     };
     Ball.prototype.deactivate = function () {
         this.run = false;
-        this.error = new vector_1.Vector();
         this.p = new vector_1.Vector();
         this.i = new vector_1.Vector();
         this.d = new vector_1.Vector();
-        this.estimated_pos = new vector_1.Vector();
-        this.estimated_vel = new vector_1.Vector();
+        this.error = new vector_1.Vector();
+        this.runtime = 0;
         return this;
     };
     Ball.prototype.toggleRunning = function () {
@@ -857,9 +864,6 @@ var Ball = (function (_super) {
         if (!this.run) {
             return this;
         }
-        var acc = this.acc.clone();
-        this.estimated_vel.add(acc.clone().multiplyScalar(dt));
-        this.estimated_pos.add(acc.clone().multiplyScalar(dt * 100));
         return this;
     };
     Ball.prototype.bounds_check = function (t, r, b, l) {
@@ -883,7 +887,6 @@ var Ball = (function (_super) {
         return this;
     };
     Ball.prototype.draw = function (ctx, cW, cH) {
-        var desired = this.pos.clone().add(this.error);
         ctx.beginPath();
         ctx.lineWidth = 7;
         ctx.strokeStyle = '#325FA2';
@@ -902,7 +905,7 @@ exports.Ball = Ball;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var vector_1 = __webpack_require__(1);
+var vector_1 = __webpack_require__(2);
 var Thing = (function () {
     function Thing(mass, pos, vel, acc) {
         if (pos === void 0) { pos = new vector_1.Vector(); }
@@ -948,7 +951,8 @@ exports.air_density = 1.22;
 Object.defineProperty(exports, "__esModule", { value: true });
 var Alm = __webpack_require__(0);
 var alm_1 = __webpack_require__(0);
-var actions_1 = __webpack_require__(2);
+var store_1 = __webpack_require__(1);
+var actions_1 = __webpack_require__(3);
 __webpack_require__(11);
 var shownCount = 0;
 var RunCtrl = function (props) { return (Alm.el("div", { className: 'ctrl' },
@@ -992,12 +996,6 @@ var LogBar = function (props) { return !props.show ? Alm.el("span", null) : (Alm
         ": ",
         props.ball.d.toString()),
     Alm.el("p", null,
-        "Estimated position: ",
-        props.ball.estimated_pos.toString()),
-    Alm.el("p", null,
-        "Estimated velocity: ",
-        props.ball.estimated_vel.toString()),
-    Alm.el("p", null,
         "Error: ",
         props.ball.error.toString()))); };
 var MainComponent = function (props) { return (Alm.el("section", { id: "the_app", className: "app", tabindex: 1, on: {
@@ -1005,6 +1003,18 @@ var MainComponent = function (props) { return (Alm.el("section", { id: "the_app"
             switch (evt.getRaw().keyCode) {
                 case 32:
                     props.toggleRun();
+                    break;
+                case 37:
+                    props.throttle(store_1.Direction.Left);
+                    break;
+                case 38:
+                    props.throttle(store_1.Direction.Up);
+                    break;
+                case 39:
+                    props.throttle(store_1.Direction.Right);
+                    break;
+                case 40:
+                    props.throttle(store_1.Direction.Down);
                     break;
                 default:
                     return;
@@ -1033,7 +1043,7 @@ exports.default = alm_1.connect(function (_a) {
     toggleShowLog: function () { return dispatch(actions_1.toggleShowLog()); },
     toggleRun: function () { return dispatch(actions_1.toggleRun()); },
     canvasUpdate: function (d) { return dispatch(actions_1.canvasUpdate(d)); },
-    sling: function (d) { return dispatch(actions_1.sling(d)); }
+    throttle: function (d) { return dispatch(actions_1.throttle(d)); }
 }); })(MainComponent);
 
 
@@ -1646,8 +1656,9 @@ var __assign = (this && this.__assign) || Object.assign || function(t) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var actions_1 = __webpack_require__(2);
-var physics_1 = __webpack_require__(3);
+var actions_1 = __webpack_require__(3);
+var store_1 = __webpack_require__(1);
+var physics_1 = __webpack_require__(4);
 function draw(_a) {
     var canvasCtx = _a.canvasCtx, canvasWidth = _a.canvasWidth, canvasHeight = _a.canvasHeight, ball = _a.ball;
     canvasCtx.clearRect(0, 0, canvasWidth, canvasHeight);
@@ -1683,16 +1694,26 @@ var reducer = function (state, action) {
             ball.toggleRunning();
             return __assign({}, state, { ball: ball });
         }
-        case actions_1.Actions.Sling: {
+        case actions_1.Actions.Throttle: {
             var ball = state.ball;
-            var evt = action.data;
-            var rect = evt
-                .target
-                .getBoundingClientRect();
-            var x = (evt.clientX - rect.left) - (state.canvasWidth / 2);
-            var y = state.canvasHeight - (evt.clientY - rect.top);
-            ball.vel = new physics_1.Vector((ball.pos.x - x) / 10, (ball.pos.y - y) / 10);
-            return __assign({}, state, { ball: ball });
+            if (!ball.run) {
+                return state;
+            }
+            switch (action.data) {
+                case store_1.Direction.Left:
+                    ball.acc.subtract(new physics_1.Vector(ball.thrust, 0));
+                    break;
+                case store_1.Direction.Right:
+                    ball.acc.add(new physics_1.Vector(ball.thrust, 0));
+                    break;
+                case store_1.Direction.Up:
+                    ball.acc.add(new physics_1.Vector(0, ball.thrust * 10));
+                    break;
+                case store_1.Direction.Down:
+                    ball.acc.subtract(new physics_1.Vector(0, ball.thrust));
+                    break;
+            }
+            return state;
         }
         default:
             return state;

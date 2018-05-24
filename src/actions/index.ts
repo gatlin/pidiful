@@ -11,7 +11,7 @@ export enum Actions {
     CanvasUpdate,
     ToggleShowLog,
     ToggleRun,
-    Sling
+    Throttle
 };
 
 export const tick = () => ({
@@ -31,7 +31,7 @@ export const toggleRun = () => ({
     type: Actions.ToggleRun
 });
 
-export const sling = data => ({
-    type: Actions.Sling,
+export const throttle = data => ({
+    type: Actions.Throttle,
     data
 });

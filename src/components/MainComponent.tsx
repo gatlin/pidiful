@@ -1,10 +1,11 @@
 import * as Alm from 'alm';
 import { connect } from 'alm';
+import { Direction } from '../store';
 import {
     toggleRun,
     toggleShowLog,
     canvasUpdate,
-    sling
+    throttle
 } from '../actions';
 import './MainComponent.css';
 import { Vector } from '../physics';
@@ -57,8 +58,6 @@ const LogBar = props => !props.show ? <span></span> : (
       <p><em>P</em>: { props.ball.p.toString() }</p>
       <p><em>I</em>: { props.ball.i.toString() }</p>
       <p><em>D</em>: { props.ball.d.toString() }</p>
-      <p>Estimated position: { props.ball.estimated_pos.toString() }</p>
-      <p>Estimated velocity: { props.ball.estimated_vel.toString() }</p>
       <p>Error: { props.ball.error.toString() }</p>
     </div>
 );
@@ -79,6 +78,18 @@ const MainComponent = props => (
                   props.toggleRun();
                   break;
                   // Left
+              case 37:
+                  props.throttle(Direction.Left);
+                  break;
+              case 38:
+                  props.throttle(Direction.Up);
+                  break;
+              case 39:
+                  props.throttle(Direction.Right);
+                  break;
+              case 40:
+                  props.throttle(Direction.Down);
+                  break;
               default:
                   return;
               }
@@ -120,6 +131,6 @@ export default connect(
         toggleShowLog: () => dispatch(toggleShowLog()),
         toggleRun: () => dispatch(toggleRun()),
         canvasUpdate: d => dispatch(canvasUpdate(d)),
-        sling: d => dispatch(sling(d))
+        throttle: d => dispatch(throttle(d))
     })
 )(MainComponent);

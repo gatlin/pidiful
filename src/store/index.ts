@@ -5,6 +5,13 @@
 
 import { Vector, Ball } from '../physics';
 
+export enum Direction {
+    Left,
+    Right,
+    Up,
+    Down
+};
+
 export type State = {
     geometry: Object;
     ball: Ball;
