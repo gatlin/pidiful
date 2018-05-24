@@ -814,6 +814,8 @@ var Ball = (function (_super) {
         _this.runtime = 0;
         _this.thrust = 10.0;
         _this.previous_acc = new vector_1.Vector();
+        _this.estimated_pos = new vector_1.Vector();
+        _this.estimated_vel = new vector_1.Vector();
         return _this;
     }
     Ball.prototype.activate = function () {
@@ -918,13 +920,13 @@ var Thing = (function () {
     }
     Thing.prototype.step = function (dt, otherForces) {
         if (otherForces === void 0) { otherForces = new vector_1.Vector(); }
-        var drag = this.drag_force().divideScalar(this.mass);
         var gravity = new vector_1.Vector(0, -9.81);
-        this.vel.add(this.acc.clone().multiplyScalar(dt));
-        this.pos.add(this.vel.clone().multiplyScalar(dt * 100));
+        var drag = this.drag_force().divideScalar(this.mass);
         this.acc
             .add(drag.add(gravity).clone())
             .divideScalar(2);
+        this.vel.add(this.acc.clone().multiplyScalar(dt));
+        this.pos.add(this.vel.clone().multiplyScalar(dt * 100));
         return this;
     };
     return Thing;

@@ -25,13 +25,14 @@ export abstract class Thing {
      * (such as drag).
      */
     public step(dt: number, otherForces: Vector = new Vector()): this {
-        const drag = this.drag_force().divideScalar(this.mass);
         const gravity = new Vector(0, -9.81);
-        this.vel.add(this.acc.clone().multiplyScalar(dt));
-        this.pos.add(this.vel.clone().multiplyScalar(dt * 100));
+        const drag = this.drag_force().divideScalar(this.mass);
         this.acc
             .add(drag.add(gravity).clone())
             .divideScalar(2);
+
+        this.vel.add(this.acc.clone().multiplyScalar(dt));
+        this.pos.add(this.vel.clone().multiplyScalar(dt * 100));
         return this;
     }
 

@@ -21,6 +21,9 @@ export class Ball extends Thing {
     public thrust: number;
     public previous_acc: Vector;
 
+    private estimated_pos: Vector;
+    private estimated_vel: Vector;
+
     constructor(
         radius: number,
         mass: number,
@@ -46,6 +49,8 @@ export class Ball extends Thing {
         this.runtime = 0;
         this.thrust = 10.0;
         this.previous_acc = new Vector();
+        this.estimated_pos = new Vector();
+        this.estimated_vel = new Vector();
     }
 
     public activate() {
@@ -117,6 +122,21 @@ export class Ball extends Thing {
         // The error will be the distance we want to have traveled.
         // Using acceleration we will compute how far we actually traveled, and
         // update the error accordingly.
+        /*
+        const new_vel = this.estimated_vel
+            .clone()
+            .add(this.acc
+                .clone()
+                .multiplyScalar(dt));
+
+        const new_pos = this.estimated_pos
+            .clone()
+            .add(new_vel
+                .clone()
+                .multiplyScalar(dt * 100));
+        */
+
+        // not actually dealing with this yet
 
         return this;
     }
